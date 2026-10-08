@@ -1,0 +1,47 @@
+{
+  "name": "finance-jobs",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "payload": "payload",
+    "generate:types": "payload generate:types",
+    "generate:importmap": "payload generate:importmap",
+    "load-jobs": "payload run scripts/load-jobs.ts",
+    "sync": "payload run jobs/sync.ts"
+  },
+  "dependencies": {
+    "@payloadcms/db-postgres": "3.90.2",
+    "@payloadcms/next": "3.90.2",
+    "@payloadcms/ui": "3.90.2",
+    "@redis/client": "^6.3.0",
+    "graphql": "^16.14.2",
+    "next": "16.3.8",
+    "payload": "3.90.2",
+    "react": "^19.1.7",
+    "react-dom": "^19.1.7"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20.19.43",
+    "@types/react": "^19.1.7",
+    "@types/react-dom": "^19.1.7",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.8",
+    "tailwindcss": "^4",
+    "typescript": "^5.7.4"
+  },
+  "overrides": {
+    "payload": {
+      "undici": "7.29.1"
+    },
+    "monaco-editor": {
+      "dompurify": "3.4.16"
+    }
+  }
+}

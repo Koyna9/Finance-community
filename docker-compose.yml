@@ -1,0 +1,47 @@
+# Local development database (PostgreSQL in Docker, run by OrbStack) and Redis cache.
+#   Start:  docker compose up -d
+#   Stop:   docker compose stop
+#   Status: docker compose ps
+# Database name, user and password and the Redis password come from .env.local (git-ignored).
+
+# Fixed project name (instead of the folder name), so this folder uses the same containers and the
+# same database storage (volume finance-jobs_postgres-data) as the original finance-jobs folder.
+name: finance-jobs
+
+services:
+  postgres:
+    image: postgres:17
+    restart: unless-stopped
+    env_file:
+      - .env.local
+    ports:
+      - "127.0.0.1:5432:5432" # only reachable from this laptop
+    volumes:
+      - postgres-data:/var/lib/postgresql/data # data survives restarts
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Shared cache for page data (lib/cache.ts). Cache only: nothing is saved to disk.
+  # Same version family as managed Redis on AWS / GCP; password required, like production.
+  redis:
+    image: redis:7.2-alpine
+    restart: unless-stopped
+    env_file:
+      - .env.local
+    command:
+      - sh
+      - -c
+      - exec redis-server --requirepass "$$REDIS_PASSWORD" --maxmemory 64mb --maxmemory-policy volatile-lru --save "" --appendonly no
+    ports:
+      - "127.0.0.1:6379:6379" # only reachable from this laptop
+    healthcheck:
+      test: ["CMD-SHELL", "REDISCLI_AUTH=\"$$REDIS_PASSWORD\" redis-cli ping | grep -q PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  postgres-data:
