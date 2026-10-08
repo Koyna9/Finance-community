@@ -4,14 +4,21 @@
 //
 //   npm run load-jobs          (= payload run scripts/load-jobs.ts; reads .env.local)
 
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { getPayload } from "payload";
 import { bumpCacheVersion } from "../lib/cache";
 import config from "../payload.config";
 import type { Job } from "../payload-types";
 import { toJobData, toRow } from "../shared/rules.js";
 
-const FILES = ["first-job.json", "raw-jobs.json", "raw-fresh.json"];
+// The backfill files, then the new jobs saved by each sync run (data/sync/<time>-active-<offset>.json,
+// oldest first). The sync writes its jobs straight into the database, so without these files a fresh
+// database (a new teammate, production) would miss them.
+const SYNC_DIR = new URL("../data/sync/", import.meta.url);
+const SYNC_FILES = existsSync(SYNC_DIR)
+	? readdirSync(SYNC_DIR).filter((f) => /-active-\d+\.json$/.test(f)).sort().map((f) => `sync/${f}`)
+	: [];
+const FILES = ["first-job.json", "raw-jobs.json", "raw-fresh.json", ...SYNC_FILES];
 
 const payload = await getPayload({ config });
 

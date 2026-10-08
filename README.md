@@ -80,7 +80,7 @@ npm run load-jobs
 ```
 
 Loads the saved jobs from `data/` into your database (no API calls, no cost). It should say
-`Created: 453` and `Open jobs in Payload: 453`. It is safe to run again (it only adds jobs that
+`Created: 458` and `Open jobs in Payload: 458`. It is safe to run again (it only adds jobs that
 are missing).
 
 ### 8. Start the site
@@ -120,9 +120,11 @@ and `npx payload migrate` (if there are new files in `migrations/`) before `npm 
 
 ## Jobs data
 
-The saved job files are in `data/` (committed): `first-job.json`, `raw-jobs.json` and
-`raw-fresh.json` hold the jobs that `npm run load-jobs` loads; `data/sync/` holds the raw
-responses of sync runs and `credits.json` the last API credit counts.
+The saved API files are in `data/` (committed, no secrets):
+- **Jobs** (what `npm run load-jobs` loads): `first-job.json`, `raw-jobs.json`, `raw-fresh.json`
+  and the new jobs of each sync run, `data/sync/*-active-*.json`. Together: 458 jobs.
+- **Other:** the rest of `data/sync/` (lists of closed job IDs from sync runs) and
+  `credits.json` (the last API credit counts).
 
 ## If something goes wrong
 

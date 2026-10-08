@@ -123,7 +123,7 @@ finance-jobs/
   scripts/check-credits.mjs the Day 2 one-job credit check
   scripts/test-rules.mjs    tiny test of rules.js on fake jobs
   scripts/backfill.mjs      fetches jobs (capped) and saves raw files: --test (5), dev (BACKFILL_MAX), --fresh
-  scripts/load-jobs.ts      saved raw files -> toRow -> Payload Jobs (create new by sourceId; no API calls)
+  scripts/load-jobs.ts      saved raw files (incl. data/sync/*-active-*.json) -> toRow -> Payload Jobs (create new by sourceId; no API calls)
                             (replaces scripts/make-seed.mjs)
   jobs/sync.ts              nightly sync (section 10); `npm run sync`
   design/DESIGN.md          approved UI design (section 11) + design/mockups/ (reference only)
