@@ -111,11 +111,12 @@ finance-jobs/
   collections/              Jobs.ts, SyncRuns.ts, Users.ts, CategoryPages.ts (section 7)
   globals/SiteText.ts       editable home headline/subline + default SEO text (section 7)
   migrations/               Payload migrations (committed)
-  data/first-job.json       the 1-job credit check from Day 2 (git-ignored); kept and loaded
-  data/raw-jobs.json        dev jobs: 5-job test + dev backfill (git-ignored); reuse, don't re-fetch
-  data/raw-fresh.json       fresh load (git-ignored); reuse, don't re-fetch
-  data/credits.json         latest x-api-* credit headers, written after every API call (git-ignored)
-  data/sync/                raw responses saved by each sync run (active + expired), git-ignored
+  data/first-job.json       the 1-job credit check from Day 2; kept and loaded
+  data/raw-jobs.json        dev jobs: 5-job test + dev backfill; reuse, don't re-fetch
+  data/raw-fresh.json       fresh load; reuse, don't re-fetch
+  data/credits.json         latest x-api-* credit headers, written after every API call
+  data/sync/                raw responses saved by each sync run (active + expired)
+                            All of data/ is committed (agreed 2026-10-08; no secrets in it).
   shared/rules.js           category, level, title, place, pay rules — used by the load script AND sync
   shared/states.js          US state name -> 2-letter code (incl. District of Columbia -> DC)
   scripts/fantastic.mjs     API helper: reads the key from .env.local, shared filters (title_advanced)

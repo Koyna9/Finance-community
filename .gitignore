@@ -44,5 +44,5 @@ next-env.d.ts
 # old Cloudflare secrets file (removed in Day 4A); keep ignored in case one reappears
 .dev.vars*
 
-# project data (generated; may be large) — see CLAUDE.md section 5
-/data/
+# data/ (saved API job files, sync responses, credits.json) IS committed (agreed 2026-10-08), so
+# a new teammate can run `npm run load-jobs` without asking for the files. It holds no secrets.

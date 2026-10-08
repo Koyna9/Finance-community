@@ -1,0 +1,167 @@
+[
+  {
+    "id": 2400470726,
+    "date_posted": "2026-10-07T01:53:16",
+    "date_created": "2026-10-06T21:09:57.170554",
+    "title": "Accounting Manager",
+    "organization": "G10 Inc",
+    "organization_url": null,
+    "date_valid_through": null,
+    "locations": [
+      {
+        "@type": "Place",
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "1501 East Wisconsin Street",
+          "addressLocality": "Delavan",
+          "addressRegion": "WI",
+          "postalCode": "53115",
+          "addressCountry": "US"
+        }
+      }
+    ],
+    "locations_alt": null,
+    "location_type": null,
+    "location_requirements": null,
+    "salary": null,
+    "employment_type": null,
+    "url": "https://recruiting.paylocity.com/Recruiting/Jobs/Details/4566044",
+    "source_type": "ats",
+    "source": "paylocity",
+    "source_domain": "recruiting.paylocity.com",
+    "source_slug": null,
+    "organization_logo": "https://recruiting.paylocity.com/recruiting/jobs/GetLogoFile?moduleId=22237",
+    "cities_derived": [
+      "Delavan"
+    ],
+    "counties_derived": [
+      "Walworth County"
+    ],
+    "regions_derived": [
+      "Wisconsin"
+    ],
+    "countries_derived": [
+      "United States"
+    ],
+    "locations_derived": [
+      "Delavan, Wisconsin, United States"
+    ],
+    "timezones_derived": [
+      "America/Chicago"
+    ],
+    "lats_derived": [
+      42.63804206834489
+    ],
+    "lngs_derived": [
+      -88.6235642977371
+    ],
+    "domain_derived": "geneva10.com",
+    "org_linkedin_slug": "g10-fulfillment",
+    "ai_salary_currency": null,
+    "ai_salary_value": null,
+    "ai_salary_min_value": null,
+    "ai_salary_max_value": null,
+    "ai_salary_unit_text": null,
+    "ai_benefits": null,
+    "ai_experience_level": "5-10",
+    "ai_work_arrangement": "On-site",
+    "ai_work_arrangement_office_days": null,
+    "ai_remote_location": null,
+    "ai_remote_location_derived": null,
+    "ai_key_skills": [
+      "Month-end close",
+      "Journal entries",
+      "Reconciliations",
+      "Financial statements",
+      "GAAP",
+      "Internal controls",
+      "Accounts payable",
+      "Accounts receivable",
+      "NetSuite",
+      "Ramp",
+      "Process improvement",
+      "Compliance reporting",
+      "Technical accounting",
+      "AI-assisted workflows",
+      "Audit coordination"
+    ],
+    "ai_hiring_manager_name": null,
+    "ai_hiring_manager_email_address": null,
+    "ai_core_responsibilities": "The Accounting Manager is responsible for leading the month-end close process, reviewing journal entries, and ensuring the accuracy of financial statements. They will also oversee AP and AR functions, maintain internal controls, and drive process improvements within the ERP system.",
+    "ai_requirements_summary": "Candidates should have a strong foundation in accounting concepts, attention to detail, and the ability to work with new tools including AI-based workflows. A bachelor's degree in accounting or finance and approximately 5 years of experience are preferred, with CPA certification being a plus.",
+    "ai_working_hours": 40,
+    "ai_employment_type": [
+      "FULL_TIME"
+    ],
+    "ai_job_language": "English",
+    "ai_visa_sponsorship": false,
+    "ai_keywords": [
+      "Accounting Manager",
+      "Month-end close",
+      "ERP",
+      "NetSuite",
+      "Ramp",
+      "GAAP",
+      "Financial statements",
+      "Internal controls",
+      "Accounts payable",
+      "Accounts receivable",
+      "CPA",
+      "AI-assisted workflows",
+      "Compliance",
+      "Process improvement",
+      "Workpapers",
+      "Journal entries",
+      "Reconciliations",
+      "Amazon Vendor Central",
+      "Amazon Seller Central",
+      "Auditors",
+      "Tax preparers",
+      "Finance",
+      "Accounting",
+      "Technical accounting"
+    ],
+    "ai_taxonomies_a": [
+      "Finance & Accounting",
+      "Management & Leadership"
+    ],
+    "ai_education": [
+      "bachelor degree",
+      "professional certificate"
+    ],
+    "description_text": "Description\nSUMMARY:\nThe Accounting Manager is responsible for closing G10's books each month and for the accuracy of what comes out of them. You will lead the close calendar, review the team's journal entries and reconciliations, and handle the more technical work yourself. This is a hands-on role - you are in the ERP and the workpapers, not just reviewing them – and it carries ownership of the internal controls and documentation that support the financial statements. \nWe expect everyone on the Finance & Accounting team to actively experiment with AI in their daily work. You don't need to be an expert – but you do need to be curious, willing to try things, and willing to share what works (and what doesn't) with the team. Over time, we expect AI-assisted workflows to become a standard part of how we close the books, build reports, and analyze the business. \n\nKEY RESULT AREAS:\nOwn the month-end close process, including the close calendar, task assignment, and review of journal entries and reconciliations\nReview and approve the work of accounting staff, providing technical guidance and coaching\nPrepare and review monthly financial statements and supporting schedules for accuracy and completeness\nEnsure transactions are recorded in accordance with GAAP & company policy and research technical accounting questions as they arise\nOversee AP functions, including Ramp approval workflows and exception resolution\nOversee AR functions, cash application, and monitoring, including leveraging Amazon Vendor and Seller Central\nMaintain and document internal controls over the accounting cycle and identify & remediate control gaps\nPrepare required compliance reports for external lenders\nLiaise with shared services finance team, reviewing accuracy and managing compliance where applicable in payroll functions\nServe as primary contact for external auditors and tax preparers, coordinating requests and schedules\nDrive process improvement and system enhancements in the ERP to shorten close and reduce manual effort\nPerforms other duties as assigned. \nRequirements\nSKILLS\nStrong foundation in core accounting concepts and the month-end close cycle\nStrong attention to detail and ownership of your work\nOrganized, deadline-driven, and able to juggle multiple items and projects at once\nWillingness to pick up new tools quickly – especially AI-based ones\nClear communicator, comfortable working directly with vendors, customers, and teammates across the business\nEDUCATION AND EXPERIENCE\nBachelor’s degree in accounting, finance or related field preferred\nHolding or working toward Certified Public Accountant certification preferred\n5 years’ experience in accounting or finance setting preferred\nExperience working with NetSuite and Ramp preferred\nPHYSICAL REQUIREMENTS\nSitting for long periods of time\nMust be able to lift to 15 pounds.",
+    "org_linkedin_id": 81892762,
+    "org_linkedin_headcount": 91,
+    "org_linkedin_website": "https://g10fulfillment.com",
+    "org_linkedin_size": "201-500 employees",
+    "org_linkedin_slogan": null,
+    "org_linkedin_industry": "Transportation, Logistics, Supply Chain and Storage",
+    "org_linkedin_followers": 928,
+    "org_linkedin_headquarters": "Delavan, Wisconsin",
+    "org_linkedin_type": "Partnership",
+    "org_linkedin_founded_date": "2009",
+    "org_linkedin_specialties": [
+      ""
+    ],
+    "org_linkedin_locations": [
+      "1501 E Wisconsin St, Delavan, Wisconsin 53115, US",
+      "12400 Fox River Rd, Twin Lakes, Wisconsin 53181, US",
+      "1250 S 71st Ave, Phoenix, Arizona 85043, US",
+      "5 S 84th Ave, Tolleson, Arizona 85353, US",
+      "1334 Drop Off Dr, Summerville, South Carolina 29486, US",
+      "46 Isidor Ct, Sparks, Nevada 89441, US"
+    ],
+    "org_linkedin_description": "At G10 Fulfillment, we help growing brands scale smarter.\n\nWith over 1.5 million sq. ft. of warehouse space and a presence across key U.S. markets, G10 offers a full suite of fulfillment services designed to support both DTC and B2B operations. From Amazon FBA prep and retail fulfillment to wholesale distribution and custom kitting, we provide the infrastructure, technology, and hands-on support to help you streamline logistics and exceed customer expectations.",
+    "org_linkedin_recruitment_agency_derived": false,
+    "org_linkedin_name": "G10 Fulfillment",
+    "org_crunchbase_categories": [
+      "Delivery Service",
+      "Freight Service",
+      "Logistics",
+      "Supply Chain Management",
+      "Warehousing"
+    ],
+    "org_crunchbase_total_investment": 0,
+    "org_logo_permalink": "https://crustdata-media.s3.us-east-2.amazonaws.com/company/0833b4231ed5e21a8a23895fb6c0477374d339b928ce20e2b0c604360d54905a.jpg"
+  }
+]
