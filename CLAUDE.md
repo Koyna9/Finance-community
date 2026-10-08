@@ -758,3 +758,8 @@ Notes / decisions log (append here):
   and no `.env*` / `data/` file was ever committed. Branches renamed (locally and on GitHub):
   `move-to-payload` → **`main`** (default branch, all current work), old Cloudflare `main` → `old-main`.
   Commits stay local until pushed (`git push`); Claude pushes only when asked.
+- 2026-10-08 — SiteText wired to the home page (section 7): `getSiteText()` in `lib/db.ts` (cached);
+  the home H1, subline and meta description use the admin text when filled, else the current text;
+  saving Site Text in /admin clears the Redis cache (hook). Admin field notes explain each field.
+  Checked on a production build (1,013 URLs): identical to before with the fields empty, and again
+  after filling + clearing them; filled text shows on the home page at once, other pages unchanged.

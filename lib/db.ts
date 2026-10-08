@@ -534,6 +534,23 @@ export const getCategoryPageText = cache(async (key: string): Promise<CategoryPa
 	});
 });
 
+export type SiteText = { homeHeadline: string | null; homeSubline: string | null; defaultSeoDescription: string | null };
+
+// Admin-written home page text (SiteText global); empty fields -> null (the page keeps its own text).
+// cache(): the home page and its generateMetadata share one read per request.
+export const getSiteText = cache(async (): Promise<SiteText> => {
+	return cached("getSiteText", [], async () => {
+		const payload = await payloadClient();
+		const d = await payload.findGlobal({ slug: "site-text", depth: 0 });
+		const text = (v: string | null | undefined) => v?.trim() || null;
+		return {
+			homeHeadline: text(d?.homeHeadline),
+			homeSubline: text(d?.homeSubline),
+			defaultSeoDescription: text(d?.defaultSeoDescription),
+		};
+	});
+});
+
 export function payMidpoint(min: number | null, max: number | null): number | null {
 	if (min && max) return (min + max) / 2;
 	return min || max || null;

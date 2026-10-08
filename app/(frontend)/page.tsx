@@ -8,6 +8,7 @@ import {
 	getLatestJobs,
 	getLevelCounts,
 	getSiteStats,
+	getSiteText,
 	getTopStates,
 	minJobsPerPage,
 } from "@/lib/db";
@@ -27,11 +28,12 @@ const QUICK_LINKS = [
 	{ href: "/entry-level-finance-jobs", label: "Entry level" },
 ];
 
+// Headline, subline and meta description can be edited in /admin (Site Text); empty = the text below.
 export async function generateMetadata(): Promise<Metadata> {
-	const stats = await getSiteStats();
+	const [stats, siteText] = await Promise.all([getSiteStats(), getSiteText()]);
 	return {
 		title: { absolute: homeTitle() },
-		description: homeDescription(stats.open),
+		description: siteText.defaultSeoDescription ?? homeDescription(stats.open),
 		alternates: { canonical: canonicalUrl("/") },
 	};
 }
@@ -167,7 +169,7 @@ function Arrow() {
 }
 
 export default async function Home() {
-	const [stats, categoryCounts, levelCounts, states, jobs, min, titles, companies] = await Promise.all([
+	const [stats, categoryCounts, levelCounts, states, jobs, min, titles, companies, siteText] = await Promise.all([
 		getSiteStats(),
 		getCategoryCounts(),
 		getLevelCounts(),
@@ -176,6 +178,7 @@ export default async function Home() {
 		minJobsPerPage(),
 		getGroupCounts("title"), // titles with pages (MIN_JOBS_PER_PAGE+ jobs), as /titles lists them
 		getGroupCounts("company", {}, 1),
+		getSiteText(),
 	]);
 	// Biggest roles first.
 	const roles = [...CATEGORY_LIST].sort((a, b) => (categoryCounts[b.key] ?? 0) - (categoryCounts[a.key] ?? 0));
@@ -200,11 +203,15 @@ export default async function Home() {
 						US finance jobs · updated every night
 					</p>
 					<h1 className="max-w-[760px] text-[34px] font-bold leading-[1.12] tracking-[-0.02em] sm:text-[46px]">
-						Finance roles at US companies, straight from their hiring pages.
+						{siteText.homeHeadline ?? "Finance roles at US companies, straight from their hiring pages."}
 					</h1>
 					<p className="max-w-[640px] text-lg leading-[1.55] text-hero-body">
-						Accounting, FP&amp;A, tax, audit and more, sorted by role, level, state and city. Every listing links to
-						the employer&apos;s own site to apply.
+						{siteText.homeSubline ?? (
+							<>
+								Accounting, FP&amp;A, tax, audit and more, sorted by role, level, state and city. Every listing links to
+								the employer&apos;s own site to apply.
+							</>
+						)}
 					</p>
 					<div className="mt-1.5 flex flex-wrap gap-3">
 						{QUICK_LINKS.map((q) => (

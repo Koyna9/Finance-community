@@ -456,8 +456,17 @@ export interface PayloadMigrationsSelect<T extends boolean = true> {
  */
 export interface SiteText {
   id: number;
+  /**
+   * Big headline on the home page. Empty = the current headline.
+   */
   homeHeadline?: string | null;
+  /**
+   * Text under the home headline. Empty = the current text.
+   */
   homeSubline?: string | null;
+  /**
+   * Home page meta description for Google (about 150 characters). Empty = the generated one with the job count.
+   */
   defaultSeoDescription?: string | null;
   updatedAt?: string | null;
   createdAt?: string | null;
