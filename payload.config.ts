@@ -27,7 +27,7 @@ export default buildConfig({
 	secret: process.env.PAYLOAD_SECRET || "",
 	typescript: { outputFile: path.resolve(dirname, "payload-types.ts") },
 	db: postgresAdapter({
-		// DATABASE_URL (+ DATABASE_CA_CERT / DATABASE_SSL_VERIFY for cloud SSL): lib/database-pool.ts
+		// DATABASE_URL; SSL via "?sslmode=require" in it (AWS RDS): lib/database-pool.ts
 		pool: databasePool(),
 		// Tables change only through migrations (never auto-"push" in dev).
 		push: false,
