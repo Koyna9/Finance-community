@@ -115,6 +115,7 @@ and `npx payload migrate` (if there are new files in `migrations/`) before `npm 
 |---|---|
 | `npm run build` | Production build (checks everything compiles) |
 | `npx tsc --noEmit` | Type check; prints nothing when all is fine |
+| `npm run lint` | Code checks (ESLint); prints nothing when all is fine |
 | `npx payload migrate:status` | Shows which database migrations have run |
 | `npm run sync` | Nightly sync: fetches new jobs and closes expired ones. **Uses paid API credits** and needs `FANTASTIC_JOBS_KEY`; ask the project owner before running it |
 

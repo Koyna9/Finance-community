@@ -763,3 +763,8 @@ Notes / decisions log (append here):
   saving Site Text in /admin clears the Redis cache (hook). Admin field notes explain each field.
   Checked on a production build (1,013 URLs): identical to before with the fields empty, and again
   after filling + clearing them; filled text shows on the home page at once, other pages unchanged.
+- 2026-10-09 — ESLint fixed (the Day 3 "`npx eslint` crashes" note): `eslint.config.mjs` now uses the
+  Next.js 16 setup (`eslint-config-next/core-web-vitals` + `/typescript`, no FlatCompat) and skips
+  generated files (`app/(payload)/`, `payload-types.ts`, `migrations/`). `npm run lint` = `eslint .`
+  (Next.js 16 removed `next lint`; `next build` no longer lints). 61 files checked: 0 errors,
+  0 warnings. Unused devDependency `@eslint/eslintrc` removed. Dev tooling only; the site is unchanged.
