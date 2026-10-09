@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { initials } from "@/lib/format";
 
 const SIZES = {
@@ -20,6 +20,13 @@ export default function CompanyTile({
 	size: keyof typeof SIZES;
 }) {
 	const [failed, setFailed] = useState(false);
+	const img = useRef<HTMLImageElement>(null);
+	// A logo can fail to load BEFORE this component starts in the browser; onError then never fires.
+	// So check once on start: a finished image with no size failed (e.g. the host answers 403).
+	useEffect(() => {
+		const el = img.current;
+		if (el?.complete && el.naturalWidth === 0) setFailed(true);
+	}, []);
 	const box = `flex shrink-0 grow-0 items-center justify-center overflow-hidden ${SIZES[size]}`;
 
 	if (logo && !failed) {
@@ -28,6 +35,7 @@ export default function CompanyTile({
 				{/* Plain <img>: logos come from many outside hosts and are tiny. */}
 				{/* eslint-disable-next-line @next/next/no-img-element */}
 				<img
+					ref={img}
 					src={logo}
 					alt=""
 					width={size}
