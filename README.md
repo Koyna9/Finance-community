@@ -4,7 +4,7 @@ Next.js 16 + Payload CMS 3 + PostgreSQL 17 + Redis. The full project brief (stac
 data budget, decisions, progress) is in [CLAUDE.md](CLAUDE.md); the approved design is in
 [design/DESIGN.md](design/DESIGN.md).
 
-## Set it up on your laptop (step by step)
+## Run locally (step by step, after cloning)
 
 These steps were tested on a fresh clone (macOS). They take about 5 minutes.
 
@@ -118,6 +118,35 @@ and `npx payload migrate` (if there are new files in `migrations/`) before `npm 
 | `npm run lint` | Code checks (ESLint); prints nothing when all is fine |
 | `npx payload migrate:status` | Shows which database migrations have run |
 | `npm run sync` | Nightly sync: fetches new jobs and closes expired ones. **Uses paid API credits** and needs `FANTASTIC_JOBS_KEY`; ask the project owner before running it |
+| `npm run release` | Database migrations, then load the saved jobs (what the release job runs online) |
+| `npm run create-admin` | Creates the first `/admin` user from `ADMIN_EMAIL` + `ADMIN_PASSWORD`, only if none exists |
+
+## Deploy to TrueFoundry
+
+The full checklist, with every environment variable and secret, is in **[DEPLOY.md](DEPLOY.md)**.
+In short: one Docker image (`Dockerfile`) runs four workloads:
+
+| Workload | Command | Notes |
+|---|---|---|
+| Site (Service, port 3000) | image default (`next start`) | health check `GET /healthz` |
+| Release (one-off Job) | `npm run release` | database migrations + load the saved jobs |
+| First admin (one-off Job) | `npm run create-admin` | `ADMIN_EMAIL` + `ADMIN_PASSWORD`; only if no user exists |
+| Nightly sync (Job, `0 2 * * *` UTC) | `npm run sync` | uses fantastic.jobs API credits |
+
+- Hosting: TrueFoundry workspace ___ · Database: managed PostgreSQL on ___ · Redis: managed Redis
+  on ___ · Live address: ___
+- Search engines are blocked until `ALLOW_INDEXING=true` is set (only on the real domain).
+- Build and test the image locally: `docker build -t finance-community .` (on an Apple-silicon Mac
+  for TrueFoundry: add `--platform linux/amd64`).
+
+## Check the sync
+
+- **Locally:** `npm run sync` (**uses paid API credits**: ask the project owner first). The log ends
+  with `Done: added N, closed N` and the credits left; `MAX_JOBS_PER_RUN=0 npm run sync` only closes
+  expired jobs (no jobs call).
+- **Online, the morning after a 02:00 UTC run:** TrueFoundry → the sync Job → last run succeeded;
+  then `/admin` → **Sync Runs** → the newest row (`added`, `closed`, and any "stopped: …" note).
+  Details: [DEPLOY.md](DEPLOY.md), section 4.
 
 ## Jobs data
 
