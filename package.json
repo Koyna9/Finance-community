@@ -12,6 +12,8 @@
     "generate:types": "payload generate:types",
     "generate:importmap": "payload generate:importmap",
     "load-jobs": "payload run scripts/load-jobs.ts",
+    "release": "payload migrate && payload run scripts/load-jobs.ts",
+    "create-admin": "payload run scripts/create-admin.ts",
     "sync": "payload run jobs/sync.ts"
   },
   "dependencies": {

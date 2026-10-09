@@ -22,10 +22,10 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build && rm -rf .next/cache
 
-# 3. Only the packages needed at run time
-FROM base AS prod-deps
-COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
+# 3. Only the packages needed at run time: the same install minus the dev tools. (A second
+#    `npm ci` here could fail at random with esbuild's "ETXTBSY" install race.)
+FROM deps AS prod-deps
+RUN npm prune --omit=dev
 
 # 4. Final image: source (scripts, data/, migrations, configs) + run-time packages + the build
 FROM base AS runtime
