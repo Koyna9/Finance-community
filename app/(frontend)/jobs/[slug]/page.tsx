@@ -309,7 +309,7 @@ function PayBox({ job, pay }: { job: Job; pay: string | null }) {
 			{pay ? (
 				<div className="flex flex-col gap-1">
 					<span className="text-[13px] text-muted">Pay stated by employer</span>
-					<span className="font-mono text-[22px] font-semibold text-accent-text sm:text-[26px]">{pay}</span>
+					<span className="font-mono text-[22px] font-semibold text-accent-text sm:text-[24px]">{pay}</span>
 					<span className="text-[13px] text-muted">per year</span>
 				</div>
 			) : (
