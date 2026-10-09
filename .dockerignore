@@ -1,0 +1,13 @@
+# Files never copied into the Docker image (see Dockerfile).
+# Secrets: settings come from TrueFoundry secrets / environment variables, never from a file.
+.env*
+# Rebuilt inside the image
+node_modules
+.next
+next-env.d.ts
+tsconfig.tsbuildinfo
+# Not needed in the image
+.git
+.DS_Store
+npm-debug.log*
+# data/ IS copied (committed): the release job's load-jobs reads it.
