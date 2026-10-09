@@ -490,6 +490,7 @@ salary estimates, articles/blogs and educational content (planned later as new P
 - [x] Day 4 — Finance/category list pages + state, city and remote pages, /locations, internal links, breadcrumbs; SEO rules 1–3: canonical tags, real 404s, BreadcrumbList (local)
 - [x] Day 5 — Level, title, company, salaries pages; SEO rules 4–6: JobPosting, closed-job handling, sitemap.xml + robots.txt (local); `jobs/sync.ts` written and tested locally with MAX_JOBS_PER_RUN=5
 - [x] Fresh load — by 2026-10-12 (before the trial ends 2026-10-13 11:20 UTC): ~370 newest jobs saved to data/raw-fresh.json
+- [x] Day 5B — Go-live prep without TrueFoundry (2026-10-09): Dockerfile (one image: site, release, create-admin, sync), release + create-admin rehearsed, /healthz, ALLOW_INDEXING block, SEO rule 7 page cache (job + salary pages), sync options, today's sync, design check + logo fix, DEPLOY.md + README + .env.example, Rich Results files
 - [ ] Day 6 — Go live on TrueFoundry: production PostgreSQL, migrations, dev + fresh jobs loaded, expired check (1m), Docker image, site Service deployed, secrets set, nightly sync Job scheduled, page caching (SEO rule 7), SITE_URL set
 - [ ] Day 7 — Custom domain, branding, polish, Google Search Console + sitemap submitted (SEO rule 8), demo rehearsal
 
@@ -768,3 +769,32 @@ Notes / decisions log (append here):
   generated files (`app/(payload)/`, `payload-types.ts`, `migrations/`). `npm run lint` = `eslint .`
   (Next.js 16 removed `next lint`; `next build` no longer lints). 61 files checked: 0 errors,
   0 warnings. Unused devDependency `@eslint/eslintrc` removed. Dev tooling only; the site is unchanged.
+- 2026-10-09 — Day 5B done (branch `finance-community-first-commit` = PR #1 into `dev`, local only):
+  - SEO baseline before any change (production build, MIN_JOBS_PER_PAGE=3, every sitemap URL + 14 test
+    URLs: status, title, description, canonical, robots, JSON-LD, H1, every link + text, full HTML,
+    sitemap, robots.txt); compared after every item. Agreed differences only: robots.txt
+    `Disallow: /healthz`, and Next.js's cached-page markers on job/salary pages (item 5).
+  - 1 Docker: `Dockerfile` (node:24-bookworm-slim, multi-stage, `npm prune --omit=dev`, non-root, no
+    secrets, `next start` on 3000; no standalone: the CLI tasks need the full packages) + `.dockerignore`
+    (excludes .env*, includes data/). Builds without a database; also for linux/amd64. The site from
+    the image is identical to the baseline.
+  - 2 `npm run release` (migrate + load-jobs) and `npm run create-admin` (ADMIN_EMAIL/ADMIN_PASSWORD,
+    only if no user exists, password never printed), rehearsed from the image on a temporary database.
+  - 3 `/healthz` (in `proxy.ts`, not a page route, so pages stay byte-identical): "ok", no database,
+    no-store, noindex, disallowed in robots.txt, not in the sitemap.
+  - 4 `ALLOW_INDEXING` (lib/site.ts): unset = robots.txt `Disallow: /` + `X-Robots-Tag: noindex, nofollow`
+    on every response (except the /jobs redirect); `true` only on the real domain.
+  - 5 SEO rule 7: only job pages and /salaries/[category] can be cached (revalidate 900, empty
+    generateStaticParams: nothing at build time). Pages reading `?page=` and pages without a URL
+    parameter keep force-dynamic (agreed). A job change in /admin refreshes them at once
+    (lib/page-cache.ts; route patterns need the group: "/(frontend)/jobs/[slug]"); jobs closed by the
+    sync show as closed after ~15 minutes (tested: 15 min 11 s).
+  - 6 Sync: `SYNC_TIME_FRAME` (24h default, 1h/24h/7d); `MAX_JOBS_PER_RUN=0` = expired-only (no jobs call).
+  - 7 Today's sync: +5 jobs, 11 closed → 452 open. **Credits left: 30 Jobs, 37 requests.**
+  - 8 Design: every page type checked at 375px and 1280px (no sideways scrolling, matches DESIGN.md;
+    agreed additions kept). Fixed: blank company tiles when a logo URL fails (7 of 344 answer 403).
+  - 9 No secrets in git history; DEPLOY.md (every variable/secret per workload, go-live order, 02:00
+    UTC check); README "Run locally", "Deploy to TrueFoundry", "Check the sync"; .env.example updated.
+  - 10 Rich Results files: ~/Desktop/rich-results/ (outside the repo).
+  - Data note: load-jobs creates jobs as open; the first live sync with EXPIRED_TIME_FRAME=1m closes
+    the 11 closed today again. Known: 9 pairs of duplicate job postings (same company/title/city).
