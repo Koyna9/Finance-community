@@ -13,3 +13,11 @@ export function siteUrl(): string {
 	if (process.env.NODE_ENV === "production") throw new Error("SITE_URL is not set");
 	return "http://localhost:3000";
 }
+
+// Whether search engines may index the site (ALLOW_INDEXING). Default OFF, so a temporary address
+// (e.g. TrueFoundry's) is never indexed by mistake: robots.txt then disallows everything and every
+// response gets "X-Robots-Tag: noindex, nofollow" (proxy.ts). Set ALLOW_INDEXING=true only on the
+// real domain. Read at request time, so the same image works for both.
+export function indexingAllowed(): boolean {
+	return ["true", "1", "yes"].includes(String(process.env.ALLOW_INDEXING ?? "").trim().toLowerCase());
+}
