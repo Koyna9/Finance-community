@@ -23,6 +23,8 @@
 # misc
 .DS_Store
 *.pem
+# Exception: AWS's PUBLIC RDS certificate bundle (no keys), needed for SSL to the database (certs/README.md)
+!certs/aws-rds-global-bundle.pem
 
 # debug
 npm-debug.log*

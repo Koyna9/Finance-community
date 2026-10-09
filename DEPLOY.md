@@ -27,6 +27,9 @@ S = mark as **secret** in TrueFoundry. "—" = not needed by that workload.
 | Name | S | Site | Release | First admin | Sync | Value |
 |---|---|---|---|---|---|---|
 | `DATABASE_URL` | S | ✔ | ✔ | ✔ | ✔ | `postgres://USER:PASSWORD@HOST:5432/DBNAME` → ___ |
+| `DATABASE_CA_CERT_FILE` |  | ✔ | ✔ | ✔ | ✔ | **AWS RDS: `certs/aws-rds-global-bundle.pem`** (AWS's public CA bundle, in the repo/image). Turns on SSL **with certificate verification** for the database (see 2a) |
+| `DATABASE_CA_CERT` | S | alt. | alt. | alt. | alt. | alternative to the file: the CA's PEM text, for small certificates only (an environment variable holds at most 128 KB). Don't set both |
+| `DATABASE_SSL_VERIFY` |  | optional | optional | optional | optional | `full` (default: certificate + server name; right for AWS RDS endpoints) or `ca` (certificate only; only if you connect by IP) |
 | `PAYLOAD_SECRET` | S | ✔ | ✔ | ✔ | ✔ | generate once: `openssl rand -hex 32`; **the same value everywhere** |
 | `REDIS_URL` | S | ✔ | ✔ | — | ✔ | `rediss://:PASSWORD@HOST:PORT` → ___ (empty = no cache; the site still works) |
 | `REDIS_CA_CERT` | S | if needed | if needed | — | if needed | only if the cloud's Redis TLS needs its own CA (GCP Memorystore): the PEM text → ___ |
@@ -42,12 +45,25 @@ S = mark as **secret** in TrueFoundry. "—" = not needed by that workload.
 | `ADMIN_PASSWORD` | S | — | — | ✔ | — | at least 12 characters; never printed. Remove it after the job ran |
 | `CACHE_TTL_SECONDS` |  | optional | — | — | — | `900` (default) |
 
+### 2a. Database SSL (AWS RDS)
+
+Cloud PostgreSQL requires SSL. Set **`DATABASE_CA_CERT_FILE=certs/aws-rds-global-bundle.pem`** on
+all four workloads, with `DATABASE_URL` pointing at the RDS **endpoint name**
+(`…rds.amazonaws.com`, not an IP). The connection is then encrypted and the server's certificate is
+verified against AWS's CA bundle (all regions). Any `sslmode` in `DATABASE_URL` is then ignored.
+- Don't use `?sslmode=require` on its own: the PostgreSQL library treats it as "fully verify" without
+  knowing AWS's CA, and the connection fails ("unable to verify the first certificate").
+- Fallback only (encrypted, server not verified): no CA settings and `?sslmode=no-verify` at the end
+  of `DATABASE_URL`.
+- Importing a dump with `pg_restore` (a different tool): add `?sslmode=require` to its URL (encrypted),
+  or `?sslmode=verify-full&sslrootcert=aws-rds-global-bundle.pem` to verify too.
+
 `NODE_ENV=production` and `PORT=3000` are already set in the image. Without `SITE_URL` the site
 starts, but its pages fail with an error (it is needed for canonical links and the sitemap).
 
 ## 3. Go-live order
 
-1. **Production PostgreSQL** (managed, provider ___) and **Redis** (managed, same cloud;
+1. **Production PostgreSQL** (AWS RDS, PostgreSQL 17; SSL: section 2a) and **Redis** (managed, same cloud;
    requirements in `CLAUDE.md` section 4: Redis OSS 7.x or Valkey 7.2/8, one primary, cluster mode
    disabled, not ElastiCache Serverless, smallest node, `maxmemory-policy volatile-lru`, no
    persistence, TLS on, password on, private network only). Note their addresses.

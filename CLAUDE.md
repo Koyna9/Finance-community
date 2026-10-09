@@ -57,7 +57,7 @@ Days 1–3 were built on Cloudflare D1 locally; Day 4A switches them over.
 | Cache | **Redis** (shared cache for page data, `lib/cache.ts`, cache-aside, 15 minutes per item, keys under `fc:`). Locally: `redis:7.2-alpine` in `docker-compose.yml`, port 6379, password required. Online: a **managed Redis on the same cloud as TrueFoundry** (probably AWS ElastiCache or GCP Memorystore): Redis OSS 7.x or Valkey 7.2/8, one primary, cluster mode disabled (not ElastiCache Serverless), smallest node (well under 100 MB needed), `maxmemory-policy volatile-lru`, no persistence/backups, TLS on, password on, private network only (reachable only from the TrueFoundry cluster) |
 | Nightly job | Node script `jobs/sync.ts`, run locally with `npm run sync`; online as a **TrueFoundry Job with a schedule trigger** `0 2 * * *` (timezone UTC) |
 | Hosting (from Day 6) | **TrueFoundry**: one Service (the Next.js + Payload app, from a Docker image) + one scheduled Job (same image, runs the sync command) |
-| Settings + secrets | `.env.local` locally (`DATABASE_URL`, `PAYLOAD_SECRET`, `FANTASTIC_JOBS_KEY`, `MIN_JOBS_PER_PAGE=1`, `SITE_URL=http://localhost:3000`, `REDIS_PASSWORD`, `REDIS_URL`); TrueFoundry secrets / environment variables online (`MIN_JOBS_PER_PAGE=3`, `SITE_URL` = the live domain, `REDIS_URL=rediss://:<password>@<host>:<port>` and, if the cloud's TLS needs it (GCP), `REDIS_CA_CERT` = its CA certificate; both for the site Service AND the sync Job) |
+| Settings + secrets | `.env.local` locally (`DATABASE_URL`, `PAYLOAD_SECRET`, `FANTASTIC_JOBS_KEY`, `MIN_JOBS_PER_PAGE=1`, `SITE_URL=http://localhost:3000`, `REDIS_PASSWORD`, `REDIS_URL`); TrueFoundry secrets / environment variables online (`MIN_JOBS_PER_PAGE=3`, `SITE_URL` = the live domain, `REDIS_URL=rediss://:<password>@<host>:<port>` and, if the cloud's TLS needs it (GCP), `REDIS_CA_CERT` = its CA certificate; both for the site Service AND the sync Job; database SSL on AWS RDS: `DATABASE_CA_CERT_FILE=certs/aws-rds-global-bundle.pem` for every workload, see `lib/database-pool.ts` and DEPLOY.md 2a) |
 | Domain | Company domain/DNS pointed at the TrueFoundry service (Day 7) |
 | Local tools | Node 24, OrbStack (Docker 29, Compose 5) |
 
@@ -129,6 +129,8 @@ finance-jobs/
   design/DESIGN.md          approved UI design (section 11) + design/mockups/ (reference only)
   lib/site.ts               SITE_NAME ("finance-community") and site-wide constants
   lib/payload.ts            one shared getPayload() helper (`payloadClient()`)
+  lib/database-pool.ts      PostgreSQL pool settings incl. cloud SSL (DATABASE_CA_CERT_FILE / DATABASE_CA_CERT / DATABASE_SSL_VERIFY)
+  certs/                    aws-rds-global-bundle.pem: AWS's PUBLIC RDS CA bundle (no keys; committed via a .gitignore exception)
   lib/fonts.ts              IBM Plex fonts (next/font), shared by the site layout and the global 404
   lib/db.ts                 all data reads used by pages (Payload Local API + SQL for summaries)
   lib/cache.ts              Redis cache used only by lib/db.ts reads (`cached`) + `bumpCacheVersion`
@@ -798,3 +800,20 @@ Notes / decisions log (append here):
   - 10 Rich Results files: ~/Desktop/rich-results/ (outside the repo).
   - Data note: load-jobs creates jobs as open; the first live sync with EXPIRED_TIME_FRAME=1m closes
     the 11 closed today again. Known: 9 pairs of duplicate job postings (same company/title/city).
+- 2026-10-09 — Database SSL for cloud PostgreSQL (manager: "Cloud PG requires SSL"; cloud = AWS):
+  - Before: only `DATABASE_URL`. With pg 8.20, `?sslmode=require` means "verify-full", and Node.js
+    doesn't trust AWS's RDS CA → "unable to verify the first certificate".
+  - Now (`lib/database-pool.ts`, used by payload.config.ts, so site, release, create-admin, load-jobs,
+    sync and lib/db.ts SQL): `DATABASE_CA_CERT_FILE` (path) or `DATABASE_CA_CERT` (PEM text) → SSL with
+    full certificate verification; URL ssl params are then removed (pg lets them override);
+    `DATABASE_SSL_VERIFY=ca` skips only the server-name check (connecting by IP). Without these,
+    unchanged (locally no SSL; `?sslmode=no-verify` = encrypted, unverified fallback).
+  - AWS's global RDS bundle is 170 KB, over Linux's 128 KB limit for one environment variable (the
+    container would not start), so it ships as `certs/aws-rds-global-bundle.pem` (public, 111 certs,
+    no keys). On AWS: `DATABASE_CA_CERT_FILE=certs/aws-rds-global-bundle.pem` on all workloads.
+  - Tested from the Docker image against a temporary SSL-only PostgreSQL with its own CA: no SSL refused;
+    sslmode=require alone fails; no-verify connects; right CA connects (also with sslmode=disable in
+    the URL, and as one-line "\n" text); wrong CA refused; the AWS bundle file loads and refuses a
+    non-AWS server; a 170 KB multi-cert file connects; both settings → clear error; by IP: full refused,
+    ca connects, ca + wrong CA refused. Release (463 jobs), create-admin, sync and the site all ran over
+    it; the database showed every connection encrypted (TLS 1.3). Local site unchanged (0 differences).

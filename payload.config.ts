@@ -8,6 +8,7 @@ import { Jobs } from "./collections/Jobs";
 import { SyncRuns } from "./collections/SyncRuns";
 import { Users } from "./collections/Users";
 import { SiteText } from "./globals/SiteText";
+import { databasePool } from "./lib/database-pool";
 import { SITE_NAME } from "./lib/site";
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -26,7 +27,8 @@ export default buildConfig({
 	secret: process.env.PAYLOAD_SECRET || "",
 	typescript: { outputFile: path.resolve(dirname, "payload-types.ts") },
 	db: postgresAdapter({
-		pool: { connectionString: process.env.DATABASE_URL || "" },
+		// DATABASE_URL (+ DATABASE_CA_CERT / DATABASE_SSL_VERIFY for cloud SSL): lib/database-pool.ts
+		pool: databasePool(),
 		// Tables change only through migrations (never auto-"push" in dev).
 		push: false,
 		migrationDir: path.resolve(dirname, "migrations"),
