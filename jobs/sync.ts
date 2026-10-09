@@ -1,8 +1,9 @@
 // Nightly sync (CLAUDE.md section 10). Locally: `npm run sync` (= payload run jobs/sync.ts, reads
 // .env.local). Online: a TrueFoundry Job with a schedule trigger `0 2 * * *` (UTC), same Docker image.
 //
-//   1. New jobs: GET /active-ats (time_frame=24h, our filters), at most MAX_JOBS_PER_RUN jobs and never
-//      below MIN_CREDITS_RESERVE Jobs credits left. Raw response saved to data/sync/ BEFORE processing.
+//   1. New jobs: GET /active-ats (time_frame=SYNC_TIME_FRAME, default 24h, our filters), at most
+//      MAX_JOBS_PER_RUN jobs and never below MIN_CREDITS_RESERVE Jobs credits left. Raw response
+//      saved to data/sync/ BEFORE processing.
 //      Only jobs whose sourceId is not in the database yet are created; existing jobs are never
 //      overwritten, so admin edits (category, level, hidden) are kept.
 //   2. Closed jobs: GET /expired-ats?time_frame=1d (no Jobs credits; a plain JSON array of job ids),
@@ -11,7 +12,10 @@
 // Exit code 0 on success, 1 on failure (so TrueFoundry shows failed runs).
 //
 // Settings (environment): MAX_JOBS_PER_RUN (5), MIN_CREDITS_RESERVE (10), FANTASTIC_JOBS_KEY,
-// DATABASE_URL, PAYLOAD_SECRET. Optional: EXPIRED_TIME_FRAME (1d; use 1m once on go-live day).
+// DATABASE_URL, PAYLOAD_SECRET. Optional: EXPIRED_TIME_FRAME (1d; use 1m once on go-live day),
+// SYNC_TIME_FRAME (24h; 1h, 24h or 7d: how far back step 1 looks, e.g. 7d on the first live run).
+// MAX_JOBS_PER_RUN=0 = "expired-only" mode: step 1 makes no API call, step 2 still closes jobs
+// (e.g. after the fantastic.jobs trial ends).
 
 import { mkdirSync, writeFileSync } from "node:fs";
 import { getPayload } from "payload";
@@ -24,6 +28,8 @@ import { toJobData, toRow } from "../shared/rules.js";
 const MAX_JOBS_PER_RUN = intSetting("MAX_JOBS_PER_RUN", 5);
 const MIN_CREDITS_RESERVE = intSetting("MIN_CREDITS_RESERVE", 10);
 const EXPIRED_TIME_FRAME = process.env.EXPIRED_TIME_FRAME ?? "1d";
+const SYNC_TIME_FRAME = process.env.SYNC_TIME_FRAME?.trim() || "24h";
+const SYNC_TIME_FRAMES = ["1h", "24h", "7d"]; // active-ats values that fit a nightly sync
 const PAGE_LIMIT = 1000; // API maximum
 
 function intSetting(name: string, fallback: number): number {
@@ -59,6 +65,13 @@ function readCredits(headers: object) {
 // ---- 1. New jobs -------------------------------------------------------------------------------
 
 async function fetchNewJobs() {
+	if (MAX_JOBS_PER_RUN === 0) {
+		notes.push("new jobs skipped: MAX_JOBS_PER_RUN=0 (expired-only mode)");
+		return;
+	}
+	if (!SYNC_TIME_FRAMES.includes(SYNC_TIME_FRAME)) {
+		throw new Error(`SYNC_TIME_FRAME must be one of ${SYNC_TIME_FRAMES.join(", ")} (got "${SYNC_TIME_FRAME}")`);
+	}
 	// Jobs credits left: from the last API response (data/credits.json), when we have it.
 	const known = lastCredits();
 	if (known) readCredits(known);
@@ -84,7 +97,7 @@ async function fetchNewJobs() {
 
 		const params: Record<string, string> = {
 			...baseFilters(),
-			time_frame: "24h",
+			time_frame: SYNC_TIME_FRAME,
 			limit: String(limit),
 			offset: String(offset),
 			description_format: "text",
@@ -170,7 +183,10 @@ async function closeExpiredJobs() {
 
 // ---- Run ---------------------------------------------------------------------------------------
 
-console.log(`Sync ${ranAt}: MAX_JOBS_PER_RUN=${MAX_JOBS_PER_RUN}, MIN_CREDITS_RESERVE=${MIN_CREDITS_RESERVE}`);
+console.log(
+	`Sync ${ranAt}: MAX_JOBS_PER_RUN=${MAX_JOBS_PER_RUN}, MIN_CREDITS_RESERVE=${MIN_CREDITS_RESERVE}, ` +
+		`SYNC_TIME_FRAME=${SYNC_TIME_FRAME}, EXPIRED_TIME_FRAME=${EXPIRED_TIME_FRAME}`,
+);
 for (const [step, fn] of [
 	["new jobs", fetchNewJobs],
 	["closed jobs", closeExpiredJobs],
