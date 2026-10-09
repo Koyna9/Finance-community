@@ -32,7 +32,13 @@ import {
 } from "@/lib/format";
 import { canonicalUrl, jobDescription, jobPostingJsonLd, jobTitle } from "@/lib/seo";
 
-export const dynamic = "force-dynamic";
+// SEO rule 7: each job page is rendered on its first visit, then served from Next.js's page cache
+// and refreshed at most every 15 minutes (nothing is rendered at build time: no database needed
+// then). Changing a job in /admin refreshes job pages at once (collections/Jobs.ts).
+export const revalidate = 900;
+export async function generateStaticParams(): Promise<{ slug: string }[]> {
+	return [];
+}
 
 const SIMILAR_OPEN = 3; // sidebar, open job
 const SIMILAR_CLOSED = 5; // main column, closed job

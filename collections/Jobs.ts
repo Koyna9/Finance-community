@@ -1,15 +1,23 @@
 import type { CollectionConfig } from "payload";
 import { bumpCacheVersionTwice } from "../lib/cache";
+import { refreshCachedPages } from "../lib/page-cache";
 import { CATEGORIES } from "../shared/rules.js";
+
+// Any change (e.g. hiding a job in /admin) clears the site's Redis cache (lib/cache.ts) and, when
+// made through the site (/admin), refreshes the cached job and salary pages (lib/page-cache.ts).
+async function afterJobChange<T>({ doc }: { doc: T }): Promise<T> {
+	await bumpCacheVersionTwice();
+	refreshCachedPages();
+	return doc;
+}
 
 // One document per job (CLAUDE.md section 7). Created by scripts/load-jobs.ts and jobs/sync.ts.
 // Pages show only jobs with status "open" and hidden = false.
 export const Jobs: CollectionConfig = {
 	slug: "jobs",
-	// Any change (e.g. hiding a job in /admin) clears the site's Redis cache at once (lib/cache.ts).
 	hooks: {
-		afterChange: [async ({ doc }) => { await bumpCacheVersionTwice(); return doc; }],
-		afterDelete: [async ({ doc }) => { await bumpCacheVersionTwice(); return doc; }],
+		afterChange: [afterJobChange],
+		afterDelete: [afterJobChange],
 	},
 	admin: {
 		useAsTitle: "title",

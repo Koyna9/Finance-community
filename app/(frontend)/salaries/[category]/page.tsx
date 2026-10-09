@@ -12,7 +12,12 @@ import { canonicalUrl, salaryDescription, salaryTitle } from "@/lib/seo";
 
 // Pay for one category: the US figure + a table by state, only states where 5+ jobs state pay
 // (CLAUDE.md section 9). The page exists only when 5+ US jobs in the category state pay.
-export const dynamic = "force-dynamic";
+// SEO rule 7: rendered on its first visit, then cached and refreshed at most every 15 minutes
+// (nothing at build time). Changing a job in /admin refreshes these pages at once (collections/Jobs.ts).
+export const revalidate = 900;
+export async function generateStaticParams(): Promise<{ category: string }[]> {
+	return [];
+}
 
 type Props = { params: Promise<{ category: string }> };
 

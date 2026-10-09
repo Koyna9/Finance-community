@@ -6,8 +6,8 @@ import { SITE_DESCRIPTION, SITE_NAME } from "@/lib/site";
 import "../globals.css";
 
 // Root layout of the public site. (Payload's admin has its own root layout in app/(payload)/.)
-// Header and footer read from the database, so every page is rendered per request.
-export const dynamic = "force-dynamic";
+// Header and footer read from the database. Each page sets its own rendering (SEO rule 7): job
+// and salary-category pages are cached for up to 15 minutes, all other pages render per request.
 
 export const metadata: Metadata = {
 	title: { default: SITE_NAME, template: `%s — ${SITE_NAME}` },
