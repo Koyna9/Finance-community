@@ -888,3 +888,24 @@ Notes / decisions log (append here):
     `~/Desktop/finance-db-dump/` and `~/Desktop/finance-production-env/` once Rahul confirms (they hold
     secrets); local branch `backup-before-ssl-fix` can be deleted. Progress section 13 not yet updated
     for Day 6/7.
+- 2026-10-13 — SEO audit (2026-10-12, by my manager) Phase 1 done on branch **`seo-fixes`** (from
+  `finance-community-first-commit`; local only, 0 API credits). Each step checked on a production build
+  (MIN_JOBS_PER_PAGE=3, all 1,015 sitemap + test URLs before/after; only intended differences):
+  - Found: the live site has `MIN_JOBS_PER_PAGE=1` (code default is 3) → most of the audit's thin pages.
+    Rahul sets it to 3 in TrueFoundry (no code). Company pages below the minimum: `noindex, follow`, out of
+    the sitemap (they stay: job pages link to them).
+  - `expireTime: 1800` (CDN keeps old copies ≤ 30 min instead of ~1 year); "$" coin out of two H2s.
+  - New Jobs fields (migration `20261012_212424_job_type_website_stated_pay`): `employmentType`,
+    `companyWebsite`, `payUnit`/`payStatedMin`/`payStatedMax`. `load-jobs` fills them on existing jobs
+    (only while empty; yearly pay unchanged), so the Release job updates the live DB with 0 credits.
+    Rehearsed from the Docker image on a copy of the pre-migration DB: 463 filled, re-run 0.
+  - JobPosting: `employmentType`, `hiringOrganization.sameAs`, `baseSalary` in the stated unit. Job page:
+    job-type chip, pay as stated. Salary figures: full-time pay only (US Accounting low $4K → $31K).
+    `validThrough` deliberately NOT added (no real end date; never invent).
+  - Home: WebSite + Organization JSON-LD (`public/logo.png`). New pages `/about`, `/how-we-source-jobs`
+    (footer column "About"). Privacy/Terms: waiting for the manager's text; who runs the site: undecided.
+  - `npm run check-live -- <url> [--staging]` (read-only launch check). On the live site today: 1 of 20
+    sampled job pages still had a localhost canonical (old CDN copy).
+  - **Deploy order (DEPLOY.md 3b): Release job with the new image FIRST, then Site Service + Sync job.**
+    The old site code was tested to work with the new columns, so the order is safe.
+  - Not done (Phase 2/3 or decided against): see the plan in my chat of 2026-10-12/13 and SEO_FIXES.md.
