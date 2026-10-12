@@ -54,7 +54,7 @@ export default function PayTable({
 							High
 						</th>
 						<th scope="col" className={`${th} text-right`}>
-							Listings with pay
+							Full-time with pay
 						</th>
 					</tr>
 				</thead>
@@ -78,7 +78,7 @@ export default function PayTable({
 								{name(r)}
 							</th>
 							<td colSpan={4} className="px-4 py-3 text-right text-sm text-muted">
-								Too few listings state pay yet ({r.withPay})
+								Too few full-time listings state pay yet ({r.withPay})
 							</td>
 						</tr>
 					))}

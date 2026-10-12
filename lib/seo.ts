@@ -2,7 +2,16 @@
 // The root layout adds " — <SITE_NAME>" to every title (except the home page's absolute title).
 
 import type { Job, PayStats } from "@/lib/db";
-import { categoryInfo, joinAnd, paragraphs, payFull, placeLabel, shortUsd, shownEmploymentTypes } from "@/lib/format";
+import {
+	categoryInfo,
+	jobPayForMarkup,
+	jobPayFull,
+	joinAnd,
+	paragraphs,
+	placeLabel,
+	shortUsd,
+	shownEmploymentTypes,
+} from "@/lib/format";
 import { stateCode } from "@/shared/states.js";
 import { SITE_NAME, siteUrl } from "@/lib/site";
 
@@ -118,10 +127,10 @@ export function salaryTitle(what: string, pay: PayStats): string {
 	return `${what} Salaries in the US: Median ${shortUsd(pay.median)}`;
 }
 
-// "Yearly FP&A pay in the US from 9 listings that state pay: low $82K, median $101K, high $309K."
+// "Yearly FP&A pay in the US from 9 full-time listings that state pay: low $82K, median $101K, high $309K."
 export function salaryDescription(what: string, pay: PayStats, extra = ""): string {
 	return trimTo(
-		`Yearly ${what} pay in the US from ${pay.withPay} listings that state pay: low ${shortUsd(pay.low)}, ` +
+		`Yearly ${what} pay in the US from ${pay.withPay} full-time listings that state pay: low ${shortUsd(pay.low)}, ` +
 			`median ${shortUsd(pay.median)}, high ${shortUsd(pay.high)}.${extra}`,
 	);
 }
@@ -135,12 +144,13 @@ export function jobTitle(job: Job): string {
 }
 
 // "FP&A Manager at Ridgeway Semiconductors in Austin, TX. Pay $120,000–$140,000 a year. <summary>"
+// Pay as the employer states it ("Pay $25–$32 an hour.").
 export function jobDescription(job: Job): string {
 	const at = job.company ? ` at ${job.company}` : "";
-	const pay = payFull(job.pay_min, job.pay_max);
+	const pay = jobPayFull(job);
 	const parts = [
 		`${job.clean_title}${at} in ${placeLabel(job)}.`,
-		job.status === "open" ? (pay ? `Pay ${pay} a year.` : "") : "This role has closed.",
+		job.status === "open" ? (pay ? `Pay ${pay.amount} ${pay.a}.` : "") : "This role has closed.",
 		job.summary ?? `${categoryInfo(job.category)?.label ?? "Finance"} role. Apply on the employer's site.`,
 	];
 	return trimTo(parts.filter(Boolean).join(" "));
@@ -203,13 +213,15 @@ export function jobPostingJsonLd(job: Job): Record<string, unknown> | null {
 		data.jobLocationType = "TELECOMMUTE";
 		data.applicantLocationRequirements = { "@type": "Country", name: "US" };
 	}
-	if (job.pay_min || job.pay_max) {
-		const value: Record<string, unknown> = { "@type": "QuantitativeValue", unitText: "YEAR" };
-		if (job.pay_min && job.pay_max && job.pay_min !== job.pay_max) {
-			value.minValue = job.pay_min;
-			value.maxValue = job.pay_max;
+	// Pay in the unit the employer states it (HOUR, MONTH, ... or YEAR), as on the page.
+	const pay = jobPayForMarkup(job);
+	if (pay) {
+		const value: Record<string, unknown> = { "@type": "QuantitativeValue", unitText: pay.unitText };
+		if (pay.min && pay.max && pay.min !== pay.max) {
+			value.minValue = pay.min;
+			value.maxValue = pay.max;
 		} else {
-			value.value = job.pay_min || job.pay_max;
+			value.value = pay.min || pay.max;
 		}
 		data.baseSalary = { "@type": "MonetaryAmount", currency: "USD", value };
 	}

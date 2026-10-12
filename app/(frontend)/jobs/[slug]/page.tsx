@@ -10,6 +10,7 @@ import JsonLd from "@/components/JsonLd";
 import { MIN_PAY_LISTINGS as MIN_SALARY_LISTINGS } from "@/components/PayStrip";
 import SidebarBox, { PillLinks, type SidebarLink } from "@/components/SidebarBox";
 import {
+	countsInPayFigures,
 	getCategoryPlaceCounts,
 	getJobBySlug,
 	getPayStats,
@@ -22,9 +23,9 @@ import {
 import {
 	categoryInfo,
 	employmentTypeLabel,
+	jobPayFull,
 	levelLabel,
 	paragraphs,
-	payFull,
 	placeLabel,
 	sentences,
 	shortUsd,
@@ -92,7 +93,7 @@ export default async function JobPage({ params }: Props) {
 	// The role's salary page exists only when 5+ US jobs in the role state pay.
 	const rolePay = cat && usPay && usPay.withPay >= MIN_SALARY_LISTINGS ? usPay : null;
 
-	const pay = payFull(job.pay_min, job.pay_max);
+	const pay = jobPayFull(job); // as the employer states it: per year, per hour, ...
 	const workStyle = workStyleLabel(job.work_arrangement);
 	const employment = employmentTypeLabel(job.employment_type); // also in JobPosting (employmentType)
 	const posted = timeAgoLong(job.date_posted);
@@ -268,7 +269,7 @@ export default async function JobPage({ params }: Props) {
 								<span className="font-mono text-[22px] font-semibold text-accent-text">{shortUsd(rolePay.median)}</span>
 							</div>
 							<p className="mt-2 text-sm leading-normal text-text-2">
-								Yearly, from {rolePay.withPay} open {roleLabel} listings that state pay.
+								Yearly, from {rolePay.withPay} open full-time {roleLabel} listings that state pay.
 							</p>
 							<Link href={`/salaries/${cat.key}`} className="mt-3 inline-block text-sm font-semibold text-accent-text">
 								See {roleLabel} salaries by state →
@@ -308,15 +309,15 @@ function possessive(company: string | null): string {
 	return /s$/i.test(company) ? `${company}'` : `${company}'s`;
 }
 
-// Pay box on the right of the top band (open jobs only).
-function PayBox({ job, pay }: { job: Job; pay: string | null }) {
+// Pay box on the right of the top band (open jobs only). Pay in the unit the employer states it.
+function PayBox({ job, pay }: { job: Job; pay: { amount: string; per: string } | null }) {
 	return (
 		<div className="flex min-w-0 flex-[1_1_300px] flex-col gap-3 rounded-xl border border-border bg-surface-2 p-5">
 			{pay ? (
 				<div className="flex flex-col gap-1">
 					<span className="text-[13px] text-muted">Pay stated by employer</span>
-					<span className="font-mono text-[22px] font-semibold text-accent-text sm:text-[24px]">{pay}</span>
-					<span className="text-[13px] text-muted">per year</span>
+					<span className="font-mono text-[22px] font-semibold text-accent-text sm:text-[24px]">{pay.amount}</span>
+					<span className="text-[13px] text-muted">{pay.per}</span>
 				</div>
 			) : (
 				<span className="font-mono text-lg font-semibold text-muted">Pay not stated</span>
@@ -329,9 +330,10 @@ function PayBox({ job, pay }: { job: Job; pay: string | null }) {
 	);
 }
 
-// "<Role> pay in <State>": low / median / high + how this job compares.
+// "<Role> pay in <State>": low / median / high + how this job compares (only when this job's pay
+// is itself comparable: not part-time, contract, temporary or an internship).
 function PayBenchmark({ job, stats, roleLabel, state }: { job: Job; stats: PayStats; roleLabel: string; state: string }) {
-	const mid = payMidpoint(job.pay_min, job.pay_max);
+	const mid = countsInPayFigures(job) ? payMidpoint(job.pay_min, job.pay_max) : null;
 	let compare = "";
 	if (mid) {
 		const diff = (mid - stats.median) / stats.median;
@@ -355,7 +357,7 @@ function PayBenchmark({ job, stats, roleLabel, state }: { job: Job; stats: PaySt
 				))}
 			</div>
 			<p className="mt-3 text-sm leading-normal text-text-2">
-				{compare}Based on {stats.withPay} listings that state pay.
+				{compare}Based on {stats.withPay} full-time listings that state pay.
 			</p>
 		</SidebarBox>
 	);

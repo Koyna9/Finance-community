@@ -37,7 +37,7 @@ export default function JobCard({ job, variant }: { job: JobCardRow; variant: "c
 					{workStyle && <Chip>{workStyle}</Chip>}
 					<Chip>{levelLabel(job.level)}</Chip>
 					{!full && <Chip>{categoryInfo(job.category)?.shortLabel}</Chip>}
-					<PayChip min={job.pay_min} max={job.pay_max} />
+					<PayChip pay={job} />
 				</div>
 			</div>
 		</article>

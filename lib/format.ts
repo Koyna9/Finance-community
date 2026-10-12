@@ -132,6 +132,62 @@ export function payFull(min: number | null, max: number | null): string | null {
 	return payRange(min, max, fullUsd);
 }
 
+// ---- Pay as the employer states it (per hour / day / week / month / year) --------------------
+
+export type PayFields = {
+	pay_min: number | null; // yearly
+	pay_max: number | null;
+	pay_unit: string | null; // null = per year
+	pay_stated_min: number | null;
+	pay_stated_max: number | null;
+};
+
+const PAY_UNIT_TEXT: Record<string, { short: string; per: string; a: string }> = {
+	HOUR: { short: "/hr", per: "per hour", a: "an hour" },
+	DAY: { short: "/day", per: "per day", a: "a day" },
+	WEEK: { short: "/wk", per: "per week", a: "a week" },
+	MONTH: { short: "/mo", per: "per month", a: "a month" },
+};
+
+// $25, $21.63, $14.50
+function rateUsd(n: number): string {
+	const cents = Number.isInteger(n) ? 0 : 2;
+	return `$${n.toLocaleString("en-US", { minimumFractionDigits: cents, maximumFractionDigits: 2 })}`;
+}
+
+// Pay stated per hour/day/week/month, or null when it is yearly (or not stated).
+function statedRate(p: PayFields): { unit: (typeof PAY_UNIT_TEXT)[string]; min: number | null; max: number | null } | null {
+	const unit = p.pay_unit ? PAY_UNIT_TEXT[p.pay_unit] : undefined;
+	if (!unit || (!p.pay_stated_min && !p.pay_stated_max)) return null;
+	return { unit, min: p.pay_stated_min, max: p.pay_stated_max };
+}
+
+// Job cards: "$165K–$195K" (yearly) or "$25–$32/hr"; null when the employer did not state pay.
+export function jobPayShort(p: PayFields): string | null {
+	const r = statedRate(p);
+	if (!r) return payShort(p.pay_min, p.pay_max);
+	const amount = payRange(r.min, r.max, rateUsd);
+	return amount && `${amount}${r.unit.short}`;
+}
+
+// Job page: { amount: "$120,000–$140,000", per: "per year", a: "a year" } or "$25–$32" per hour.
+export function jobPayFull(p: PayFields): { amount: string; per: string; a: string } | null {
+	const r = statedRate(p);
+	if (r) {
+		const amount = payRange(r.min, r.max, rateUsd);
+		return amount ? { amount, per: r.unit.per, a: r.unit.a } : null;
+	}
+	const amount = payFull(p.pay_min, p.pay_max);
+	return amount ? { amount, per: "per year", a: "a year" } : null;
+}
+
+// JobPosting baseSalary values: as stated (unitText HOUR, MONTH, ...) or yearly.
+export function jobPayForMarkup(p: PayFields): { unitText: string; min: number | null; max: number | null } | null {
+	if (statedRate(p)) return { unitText: p.pay_unit!, min: p.pay_stated_min, max: p.pay_stated_max };
+	if (!p.pay_min && !p.pay_max) return null;
+	return { unitText: "YEAR", min: p.pay_min, max: p.pay_max };
+}
+
 // ---- Dates -----------------------------------------------------------------------------------
 
 // date_posted arrives without a time zone ("2026-10-07T02:48:51"); it is UTC.

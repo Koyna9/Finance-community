@@ -56,8 +56,8 @@ export default async function CategorySalaryPage({ params }: Props) {
 						{cat.label} Salaries in the US
 					</h1>
 					<p className="max-w-[720px] text-[17px] leading-normal text-text-2">
-						Yearly pay for {cat.label} jobs at US companies, from the {pay.withPay} open listings where the employer
-						states pay.
+						Yearly pay for {cat.label} jobs at US companies, from the {pay.withPay} open full-time listings where the
+						employer states pay.
 					</p>
 					<PayStrip stats={pay} salaryHref={cat.path} salaryLabel={`${cat.shortLabel} jobs`} />
 				</div>
@@ -70,7 +70,7 @@ export default async function CategorySalaryPage({ params }: Props) {
 					</h2>
 					{states.length === 0 ? (
 						<p className="rounded-[10px] border border-border bg-surface p-5 text-text-2">
-							No state has {MIN_PAY_LISTINGS} or more {cat.shortLabel} listings that state pay yet.
+							No state has {MIN_PAY_LISTINGS} or more full-time {cat.shortLabel} listings that state pay yet.
 						</p>
 					) : (
 						<PayTable

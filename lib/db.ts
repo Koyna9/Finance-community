@@ -37,8 +37,11 @@ export type Job = {
 	is_remote: number;
 	work_arrangement: string | null;
 	employment_type: string[]; // FULL_TIME, PART_TIME, ... (empty when unknown)
-	pay_min: number | null;
+	pay_min: number | null; // yearly (salary figures)
 	pay_max: number | null;
+	pay_unit: string | null; // as stated: HOUR, DAY, WEEK, MONTH, YEAR (null = per year)
+	pay_stated_min: number | null;
+	pay_stated_max: number | null;
 	summary: string | null;
 	requirements: string | null;
 	description: string | null;
@@ -52,7 +55,7 @@ export type JobCardRow = Pick<
 	Job,
 	| "id" | "slug" | "clean_title" | "company" | "company_slug" | "logo" | "category" | "level"
 	| "state" | "state_slug" | "city" | "city_slug" | "is_remote" | "work_arrangement"
-	| "pay_min" | "pay_max" | "summary" | "date_posted"
+	| "pay_min" | "pay_max" | "pay_unit" | "pay_stated_min" | "pay_stated_max" | "summary" | "date_posted"
 >;
 
 export type CountRow = { key: string; label: string; count: number };
@@ -85,6 +88,9 @@ function toJob(d: JobDoc): Job {
 		employment_type: d.employmentType ?? [],
 		pay_min: d.payMin ?? null,
 		pay_max: d.payMax ?? null,
+		pay_unit: d.payUnit ?? null,
+		pay_stated_min: d.payStatedMin ?? null,
+		pay_stated_max: d.payStatedMax ?? null,
 		summary: d.summary ?? null,
 		requirements: d.requirements ?? null,
 		description: d.description ?? null,
@@ -98,7 +104,7 @@ function toJob(d: JobDoc): Job {
 const CARD_SELECT = {
 	slug: true, cleanTitle: true, company: true, companySlug: true, logo: true, category: true, level: true,
 	state: true, stateSlug: true, city: true, citySlug: true, isRemote: true, workArrangement: true,
-	payMin: true, payMax: true, summary: true, datePosted: true,
+	payMin: true, payMax: true, payUnit: true, payStatedMin: true, payStatedMax: true, summary: true, datePosted: true,
 } as const;
 
 function toCard(d: JobDoc): JobCardRow {
@@ -107,7 +113,8 @@ function toCard(d: JobDoc): JobCardRow {
 		id: j.id, slug: j.slug, clean_title: j.clean_title, company: j.company, company_slug: j.company_slug,
 		logo: j.logo, category: j.category, level: j.level, state: j.state, state_slug: j.state_slug,
 		city: j.city, city_slug: j.city_slug, is_remote: j.is_remote, work_arrangement: j.work_arrangement,
-		pay_min: j.pay_min, pay_max: j.pay_max, summary: j.summary, date_posted: j.date_posted,
+		pay_min: j.pay_min, pay_max: j.pay_max, pay_unit: j.pay_unit, pay_stated_min: j.pay_stated_min,
+		pay_stated_max: j.pay_stated_max, summary: j.summary, date_posted: j.date_posted,
 	};
 }
 
@@ -405,18 +412,31 @@ export async function getCategoryPlaceCounts(
 
 // ---- Pay -------------------------------------------------------------------------------------
 
+// Salary figures (low / median / high) leave out part-time, contract, temporary and intern jobs:
+// their pay is not comparable to a full-time yearly salary (SEO audit 2026-10-12, item 4.5).
+// Jobs with no known employment type still count.
+export const PAY_FIGURES_EXCLUDE = ["PART_TIME", "CONTRACTOR", "TEMPORARY", "INTERN"];
+const PAY_COUNTS_SQL = `NOT EXISTS (SELECT 1 FROM jobs_employment_type t
+  WHERE t.parent_id = jobs.id AND t.value IN (${PAY_FIGURES_EXCLUDE.map((v) => `'${v}'`).join(", ")}))`;
+
+export function countsInPayFigures(job: Pick<Job, "employment_type">): boolean {
+	return !job.employment_type.some((t) => PAY_FIGURES_EXCLUDE.includes(t));
+}
+
 // Low / median / high yearly pay over open jobs that state pay (filters are optional).
 // Low = lowest stated figure, high = highest; median uses each job's midpoint.
+// withPay = jobs counted (stating pay, not excluded above); total = all open jobs matching.
 export async function getPayStats(filters: ListFilter): Promise<PayStats | null> {
 	return cached("getPayStats", [filters], async () => {
 		const values: unknown[] = [];
 		const where = filterSql(filters, values);
-		const rows = await sql<{ pay_min: number | null; pay_max: number | null }>(
-			`SELECT pay_min::float8 AS pay_min, pay_max::float8 AS pay_max FROM jobs WHERE ${where}`,
+		const rows = await sql<{ pay_min: number | null; pay_max: number | null; counts: boolean }>(
+			`SELECT pay_min::float8 AS pay_min, pay_max::float8 AS pay_max, ${PAY_COUNTS_SQL} AS counts
+     FROM jobs WHERE ${where}`,
 			values,
 		);
 
-		const paid = rows.filter((r) => r.pay_min || r.pay_max);
+		const paid = rows.filter((r) => r.counts && (r.pay_min || r.pay_max));
 		if (paid.length === 0) return null;
 		const mids = paid.map((r) => payMidpoint(r.pay_min, r.pay_max)!).sort((a, b) => a - b);
 		const half = Math.floor(mids.length / 2);
@@ -433,14 +453,14 @@ export async function getPayStats(filters: ListFilter): Promise<PayStats | null>
 export type PayGroupRow = PayStats & { key: string; label: string };
 
 // Pay per category or per state (same figures as getPayStats), only for groups where at least
-// `minWithPay` open jobs state pay. total = all open jobs in the group (with or without pay).
+// `minWithPay` counted open jobs state pay. total = all open jobs in the group (with or without pay).
 export async function getPayByGroup(by: "category" | "state", f: ListFilter, minWithPay: number): Promise<PayGroupRow[]> {
 	return cached("getPayByGroup", [by, f, minWithPay], () => {
 		const values: unknown[] = [];
 		const where = filterSql(f, values);
 		const [key, label] = by === "state" ? ["state_slug", "MIN(state)"] : ["category::text", "category::text"];
 		values.push(minWithPay);
-		const paid = "(pay_min > 0 OR pay_max > 0)";
+		const paid = `((pay_min > 0 OR pay_max > 0) AND ${PAY_COUNTS_SQL})`;
 		return sql<PayGroupRow>(
 			`SELECT ${key} AS key, ${label} AS label,
             MIN(COALESCE(NULLIF(pay_min, 0), pay_max)) FILTER (WHERE ${paid})::float8 AS low,

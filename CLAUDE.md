@@ -410,7 +410,9 @@ employer's own careers site (fantastic.jobs terms allow job-board use of the ful
 (same category and state). Links to its category, state and city pages.
 
 Shared: header (name, Finance jobs, Locations, Salaries), footer with links to all categories and
-the top 15 states, empty state "No open jobs here yet". Pay format `$85,000–$105,000`.
+the top 15 states, empty state "No open jobs here yet". Pay format `$85,000–$105,000`; pay stated
+per hour/month stays that way (`$25–$32` per hour, card `$25–$32/hr`). Salary figures (pay strips,
+`/salaries`, pay boxes) are yearly and count only full-time pay (section 8, rule 6).
 
 **SEO rules (every public page; added 2026-10-07):**
 1. **Canonical tag** on every public page via Next.js metadata (`alternates.canonical`): an absolute
@@ -427,7 +429,8 @@ the top 15 states, empty state "No open jobs here yet". Pay format `$85,000–$1
    "OTHER" left out; added 2026-10-13), `jobLocation` (`addressLocality` = city, `addressRegion` = 2-letter state code,
    `addressCountry` = "US"); for `Remote Solely` jobs use `jobLocationType: "TELECOMMUTE"` plus
    `applicantLocationRequirements` = Country "US"; `baseSalary` only when the employer states pay
-   (`currency` USD, `unitText` YEAR, `minValue`/`maxValue`); `directApply: false`. Leave out any
+   (`currency` USD, `unitText` = the unit the employer states, e.g. HOUR or YEAR, with those values,
+   `minValue`/`maxValue`); `directApply: false`. Leave out any
    field we don't have (e.g. no `validThrough`: we never know a real end date, and inventing one
    breaks "never invented"; closed jobs lose the markup the night they close). Use Google's structured-data
    guidelines for job postings; after go-live, test a few job pages in Google's Rich Results Test. (Day 5)

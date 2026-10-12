@@ -30,7 +30,7 @@ export default function PayStrip({
 				<span className="font-mono text-[22px] font-semibold">{shortUsd(stats.high)}</span>
 			</div>
 			<p className="flex-[2_1_240px] self-center px-[18px] py-3.5 text-sm leading-[1.45] text-muted">
-				Yearly, from the {stats.withPay} of {stats.total} listings that state pay.{" "}
+				Yearly, from the {stats.withPay} of {stats.total} listings that state full-time pay.{" "}
 				<Link href={salaryHref} className="font-semibold text-accent-text">
 					{salaryLabel} →
 				</Link>
