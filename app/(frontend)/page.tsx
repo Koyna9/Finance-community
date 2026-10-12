@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import JobCard from "@/components/JobCard";
+import JsonLd from "@/components/JsonLd";
 import SidebarBox, { LinkList } from "@/components/SidebarBox";
 import {
 	getCategoryCounts,
@@ -13,7 +14,7 @@ import {
 	minJobsPerPage,
 } from "@/lib/db";
 import { CATEGORY_LIST, LEVELS, levelLabel, levelPath } from "@/lib/format";
-import { canonicalUrl, homeDescription, homeTitle } from "@/lib/seo";
+import { canonicalUrl, homeDescription, homeJsonLd, homeTitle } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -185,6 +186,7 @@ export default async function Home() {
 
 	return (
 		<>
+			<JsonLd data={homeJsonLd()} />
 			{/* 1. Navy hero */}
 			<section className="relative overflow-hidden bg-ink text-white">
 				{/* Decorative: the logo mark's three bars, large, on wide screens */}

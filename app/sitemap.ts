@@ -33,7 +33,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 			getSitemapJobs(),
 		]);
 
-	const paths: string[] = ["/", "/finance-jobs", "/locations", "/titles", "/companies", "/salaries"];
+	const paths: string[] = [
+		"/",
+		"/finance-jobs",
+		"/locations",
+		"/titles",
+		"/companies",
+		"/salaries",
+		"/about",
+		"/how-we-source-jobs",
+	];
 	// National list pages with jobs.
 	for (const c of CATEGORY_LIST) if (categoryCounts[c.key]) paths.push(c.path);
 	for (const l of LEVELS) if (levelCounts[l]) paths.push(levelPath(l));

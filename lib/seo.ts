@@ -13,7 +13,7 @@ import {
 	shownEmploymentTypes,
 } from "@/lib/format";
 import { stateCode } from "@/shared/states.js";
-import { SITE_NAME, siteUrl } from "@/lib/site";
+import { SITE_DESCRIPTION, SITE_NAME, siteUrl } from "@/lib/site";
 
 const DESCRIPTION_MAX = 160;
 
@@ -62,6 +62,20 @@ export function breadcrumbJsonLd(items: { label: string; path?: string }[]) {
 
 export function homeTitle(): string {
 	return `${SITE_NAME} — US Finance Jobs from Employers' Own Hiring Pages`;
+}
+
+// WebSite + Organization structured data for the home page (SEO audit 2026-10-12, 4.6): tells Google
+// the site's name and logo. No SearchAction: the site has no search box.
+export function homeJsonLd() {
+	const url = canonicalUrl("/");
+	const organization = { "@id": `${url}/#organization` };
+	return {
+		"@context": "https://schema.org",
+		"@graph": [
+			{ "@type": "WebSite", "@id": `${url}/#website`, name: SITE_NAME, url, description: SITE_DESCRIPTION, publisher: organization },
+			{ "@type": "Organization", ...organization, name: SITE_NAME, url, logo: `${url}/logo.png` },
+		],
+	};
 }
 
 export function homeDescription(openJobs: number): string {
