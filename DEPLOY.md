@@ -72,8 +72,12 @@ starts, but its pages fail with an error (it is needed for canonical links and t
 6. **Sync job** (schedule `0 2 * * *` UTC). For the **first** run only, add `SYNC_TIME_FRAME=7d` and
    `EXPIRED_TIME_FRAME=1m` (closes dev jobs that closed since; 1 request credit), then remove both.
 7. **Day 7, real domain:** point the domain at the Service, set `SITE_URL` to it and
-   `ALLOW_INDEXING=true`, restart the Service, check `/robots.txt` lists the sitemap, then Google
-   Search Console + submit `SITE_URL/sitemap.xml`.
+   `ALLOW_INDEXING=true`, restart the Service, THEN the CloudFront invalidation `/*` (not before:
+   CloudFront would re-cache pages with noindex and the old canonicals). Then from a laptop:
+   `npm run check-live -- https://<domain>` must end with "All checks passed" (read-only; it checks
+   robots.txt + sitemap line, no noindex header, every sitemap URL and sample canonicals on the
+   domain, JobPosting on job pages). Then Google Search Console + submit `SITE_URL/sitemap.xml`.
+   Before launch, `npm run check-live -- https://<temporary address> --staging` checks the blocked setup.
 
 ## 3b. Updating the live site (every new version)
 

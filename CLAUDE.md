@@ -122,6 +122,8 @@ finance-jobs/
   scripts/fantastic.mjs     API helper: reads the key from .env.local, shared filters (title_advanced)
   scripts/check-credits.mjs the Day 2 one-job credit check
   scripts/test-rules.mjs    tiny test of rules.js on fake jobs
+  scripts/check-live.mjs    `npm run check-live -- <url> [--staging]`: read-only launch check (domain in
+                            canonicals + sitemap, robots.txt, noindex header, JobPosting)
   scripts/backfill.mjs      fetches jobs (capped) and saves raw files: --test (5), dev (BACKFILL_MAX), --fresh
   scripts/load-jobs.ts      saved raw files (incl. data/sync/*-active-*.json) -> toRow -> Payload Jobs (create new by sourceId; fill newer empty fields on existing jobs; no API calls)
                             (replaces scripts/make-seed.mjs)
@@ -139,6 +141,8 @@ finance-jobs/
   components/               one file per DESIGN.md component: Header, Footer, Breadcrumbs,
                             CompanyTile, Chip, PayChip, JobCard, ApplyButton, SidebarBox, ...
   components/PlaceLinks.tsx "Browse by state" / "Browse by city" link lists
+  components/InfoPage.tsx   layout for text pages (/about, /how-we-source-jobs; later Privacy, Terms)
+  public/logo.png           512 px logo for the home page's Organization data (same art as favicon.svg)
   app/globals.css           design tokens (Tailwind theme)
   app/(frontend)/           the public site pages (section 9) + its root layout and not-found
   app/(payload)/            Payload's admin + API routes (created by Payload; don't edit by hand)
@@ -374,6 +378,8 @@ articles/blogs and educational content; keep the setup simple so they can be add
 | Pay overview | `/salaries` | each category: low, median, high yearly USD, number of jobs with pay |
 | Pay for a category | `/salaries/[category]` | `/salaries/fpa` — US figure + table by state |
 | Job | `/jobs/[slug]` | — |
+| About | `/about` | what the site is, how it differs (added 2026-10-13; who runs it + contact: when the company decides) |
+| How we source jobs | `/how-we-source-jobs` | where jobs come from, sorting, nightly closing, stated-pay rule (keep it true when those rules change) |
 | (redirect) | `/jobs` | permanent redirect to `/finance-jobs` |
 
 Routing (Next.js App Router, inside `app/(frontend)/`): one dynamic route `[listing]/page.tsx`
@@ -421,7 +427,8 @@ per hour/month stays that way (`$25–$32` per hour, card `$25–$32/hr`). Salar
 2. **Real status codes:** unknown slugs, thin pages (below `MIN_JOBS_PER_PAGE`) and hidden jobs
    return a real HTTP 404, never a 200 "not found" page. (Day 4)
 3. **BreadcrumbList structured data** (JSON-LD) matching the visible breadcrumbs, on list pages
-   and job pages. (Day 4)
+   and job pages. (Day 4) The home page also has `WebSite` + `Organization` (name `SITE_NAME`,
+   logo `public/logo.png`, 512 px; no SearchAction: no search box) (SEO audit 2026-10-12).
 4. **JobPosting structured data** (JSON-LD) on OPEN job pages only, so jobs can appear in Google
    for Jobs. Only real data, never invented: `title`, `description` (the description text with its
    line breaks as HTML paragraphs), `datePosted`, `hiringOrganization` (`name`, `logo` and `sameAs` =
@@ -440,7 +447,8 @@ per hour/month stays that way (`$25–$32` per hour, card `$25–$32/hr`). Salar
 6. **sitemap.xml + robots.txt** (`app/(frontend)/sitemap.ts`, `app/(frontend)/robots.ts`, or wherever
    the Next.js docs say for this project's route groups). The sitemap is built from the database at
    request time and lists: home, every list page that passes the thin-page rule (page 1 only),
-   `/locations`, `/titles` + title pages, `/companies` + company pages, `/salaries` pages, and every
+   `/locations`, `/titles` + title pages, `/companies` + company pages (`MIN_JOBS_PER_PAGE`+ jobs),
+   `/salaries` pages, `/about`, `/how-we-source-jobs`, and every
    open, non-hidden job (`lastModified` = the job's `updatedAt`). If it ever passes 50,000 URLs, split
    it (Next.js `generateSitemaps`). robots.txt allows everything except `/admin` and `/api`, and
    links to the sitemap. (Day 5)
