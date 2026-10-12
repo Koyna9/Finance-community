@@ -75,6 +75,25 @@ starts, but its pages fail with an error (it is needed for canonical links and t
    `ALLOW_INDEXING=true`, restart the Service, check `/robots.txt` lists the sitemap, then Google
    Search Console + submit `SITE_URL/sitemap.xml`.
 
+## 3b. Updating the live site (every new version)
+
+Restarting the Site Service never changes the database. Database changes (migrations) run only in
+the **Release job**, and it must run BEFORE the new site code starts.
+
+1. **Build the new image.**
+2. If the new version adds a migration (a new file in `migrations/`): set the **Release job** to the
+   new image and **run it first**. It adds the new columns, then `load-jobs` fills them in on existing
+   jobs from the saved files in the image: 0 API credits, nothing re-created, admin edits kept. Its log
+   ends with `Created: 0. Already there: N (newer fields filled in: N). …` and `Open jobs in Payload: …`.
+   The running site keeps working meanwhile (the old code ignores the new columns; tested).
+3. **Then** set the **Site Service** and the **Sync job** to the new image (the Service restarts).
+4. Without a new migration, steps 1 and 3 are enough (running the Release job anyway does no harm).
+
+Migration `20261012_212424_job_type_website_stated_pay` (SEO fixes, 2026-10-13) adds the job's
+employment type, company website and pay as stated (per hour/month/year). Jobs the live sync added
+after the database import have no saved file in the image, so these fields stay empty for them; such
+jobs show exactly as before.
+
 ## 4. Check the 02:00 UTC sync run (next morning)
 
 1. TrueFoundry → the sync Job → last run: status **succeeded** (a failed run exits with code 1).

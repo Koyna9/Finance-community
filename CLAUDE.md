@@ -123,7 +123,7 @@ finance-jobs/
   scripts/check-credits.mjs the Day 2 one-job credit check
   scripts/test-rules.mjs    tiny test of rules.js on fake jobs
   scripts/backfill.mjs      fetches jobs (capped) and saves raw files: --test (5), dev (BACKFILL_MAX), --fresh
-  scripts/load-jobs.ts      saved raw files (incl. data/sync/*-active-*.json) -> toRow -> Payload Jobs (create new by sourceId; no API calls)
+  scripts/load-jobs.ts      saved raw files (incl. data/sync/*-active-*.json) -> toRow -> Payload Jobs (create new by sourceId; fill newer empty fields on existing jobs; no API calls)
                             (replaces scripts/make-seed.mjs)
   jobs/sync.ts              nightly sync (section 10); `npm run sync`
   design/DESIGN.md          approved UI design (section 11) + design/mockups/ (reference only)
@@ -250,12 +250,15 @@ what SQL in `lib/db.ts` uses. Payload adds its own `id`, `createdAt`, `updatedAt
 | `title`, `cleanTitle`, `titleSlug` (indexed) | text | |
 | `company`, `companySlug` (indexed), `logo` | text | `logo` is the image URL |
 | `companyIndustry`, `companySize` | text | `org_linkedin_industry` / `org_linkedin_size` |
+| `companyWebsite` | text | `org_linkedin_website`, cleaned (JobPosting `sameAs`; added 2026-10-13) |
 | `category` | select (8 keys from section 8), indexed | admin can correct it |
 | `level` | select: entry / mid / senior / lead, indexed | admin can correct it |
 | `state`, `stateSlug` (indexed), `city`, `citySlug` (indexed) | text | |
 | `isRemote` | checkbox | |
 | `workArrangement` | text | On-site, Hybrid, Remote OK, Remote Solely |
-| `payMin`, `payMax` | number | yearly USD |
+| `employmentType` | select, many: FULL_TIME / PART_TIME / CONTRACTOR / TEMPORARY / INTERN / OTHER | `ai_employment_type` (Google's values); admin can correct it (added 2026-10-13) |
+| `payMin`, `payMax` | number | yearly USD (used for all salary figures) |
+| `payUnit`, `payStatedMin`, `payStatedMax` | select HOUR/DAY/WEEK/MONTH/YEAR + numbers | pay as the employer states it (shown on the site and in JobPosting; added 2026-10-13) |
 | `summary`, `requirements`, `description` | textarea | |
 | `applyUrl` | text | |
 | `datePosted` | date, indexed | |
@@ -338,6 +341,13 @@ articles/blogs and educational content; keep the setup simple so they can be add
 6. **Pay:** use `ai_salary_min_value`/`ai_salary_max_value` (fall back to `ai_salary_value`), only
    when currency is USD. Convert to yearly: YEAR×1, MONTH×12, WEEK×52, DAY×260, HOUR×2080. Round.
    No pay → NULL. Never estimate or invent pay.
+   Also keep the pay as stated (`payUnit`, `payStatedMin`, `payStatedMax`, not converted): job cards,
+   the job page and JobPosting show it per hour/month as the employer wrote it; the yearly figures
+   are used only for salary figures (low/median/high), which leave out part-time, contract,
+   temporary and intern jobs (SEO audit 2026-10-12, item 4.5).
+   **Employment type:** `employmentType` = `ai_employment_type`, keeping only Google's values.
+   **Company website:** `org_linkedin_website`, fixed ("http://https://…", missing "https://") or NULL.
+   `scripts/load-jobs.ts` fills these on existing jobs only while they are empty (0 API credits).
 7. **Slugs:** lowercase, drop apostrophes (`'` and `’`: "Children's" → `childrens`),
    `&`→`and`, non-alphanumerics→`-`, trimmed.
    Job slug = `<company-slug>-<title-slug>-<city-slug or state-slug>-<id>`.

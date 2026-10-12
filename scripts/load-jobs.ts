@@ -1,6 +1,8 @@
 // Load the saved raw API files into Payload's `jobs` collection (CLAUDE.md sections 5 and 6).
-// NO API calls: it only reads data/*.json. Jobs that already exist (same sourceId) are skipped,
-// so admin edits are never overwritten and the script is safe to run again.
+// NO API calls: it only reads data/*.json. Jobs that already exist (same sourceId) are not
+// re-created, so admin edits are never overwritten and the script is safe to run again.
+// Existing jobs only get fields added after they were loaded (employmentType, companyWebsite, stated
+// pay; SEO audit 2026-10-12), and only while those fields are still empty.
 //
 //   npm run load-jobs          (= payload run scripts/load-jobs.ts; reads .env.local)
 
@@ -32,18 +34,34 @@ for (const name of FILES) {
 	console.log(`Read data/${name}: ${jobs.length} jobs`);
 }
 
-// 2. sourceIds already in the database.
+// 2. Jobs already in the database (by sourceId), with the fields step 3 may fill in.
 const existing = await payload.find({
 	collection: "jobs",
 	pagination: false,
 	depth: 0,
-	select: { sourceId: true },
+	select: { sourceId: true, payMin: true, payMax: true, payUnit: true, employmentType: true, companyWebsite: true },
 });
-const have = new Set(existing.docs.map((d) => Number(d.sourceId)));
+const have = new Map(existing.docs.map((d) => [Number(d.sourceId), d as Job]));
 
-// 3. Create the new ones.
+// Newer fields for a job that is already there: each only when still empty. Stated pay only when
+// the yearly pay is still what the rules give (so pay an admin corrected is left alone).
+function fillIn(doc: Job, data: Partial<Job>): Partial<Job> {
+	const update: Partial<Job> = {};
+	if (!doc.employmentType?.length && data.employmentType?.length) update.employmentType = data.employmentType;
+	if (!doc.companyWebsite && data.companyWebsite) update.companyWebsite = data.companyWebsite;
+	const samePay = (doc.payMin ?? null) === (data.payMin ?? null) && (doc.payMax ?? null) === (data.payMax ?? null);
+	if (!doc.payUnit && data.payUnit && samePay) {
+		update.payUnit = data.payUnit;
+		update.payStatedMin = data.payStatedMin;
+		update.payStatedMax = data.payStatedMax;
+	}
+	return update;
+}
+
+// 3. Create the new ones; fill in newer fields on existing ones.
 let created = 0;
 let skipped = 0;
+let filled = 0;
 let rejected = 0;
 for (const job of byId.values()) {
 	const row = toRow(job);
@@ -51,15 +69,23 @@ for (const job of byId.values()) {
 		rejected++;
 		continue;
 	}
-	if (have.has(Number(row.id))) {
+	const data = toJobData(row) as Omit<Job, "id" | "createdAt" | "updatedAt">;
+	const doc = have.get(Number(row.id));
+	if (doc) {
 		skipped++;
+		const update = fillIn(doc, data);
+		if (Object.keys(update).length > 0) {
+			await payload.update({ collection: "jobs", id: doc.id, data: update, depth: 0 });
+			filled++;
+		}
 		continue;
 	}
-	const data = toJobData(row) as Omit<Job, "id" | "createdAt" | "updatedAt">;
 	await payload.create({ collection: "jobs", data, depth: 0 });
 	created++;
 }
-console.log(`Unique jobs in files: ${byId.size}. Created: ${created}. Already there: ${skipped}. Rejected by toRow: ${rejected}.`);
+console.log(
+	`Unique jobs in files: ${byId.size}. Created: ${created}. Already there: ${skipped} (newer fields filled in: ${filled}). Rejected by toRow: ${rejected}.`,
+);
 
 // 4. Summary of open jobs, to compare with the Day 2 numbers.
 const total = await payload.count({ collection: "jobs", where: { status: { equals: "open" } } });
