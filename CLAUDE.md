@@ -375,7 +375,9 @@ Level pages have no state/city sub-pages in week 1. Unknown slugs → 404.
 
 **Thin-page rule:** a state or city page (for "all finance" or a category) exists only if it has
 at least `MIN_JOBS_PER_PAGE` open jobs; otherwise return 404 and never link to it. Job title
-pages (and the `/titles` index) use the same minimum.
+pages (and the `/titles` index) use the same minimum. Company pages exist with 1+ open job (their
+job pages link to them), but below `MIN_JOBS_PER_PAGE` they get `noindex, follow` and are left out
+of the sitemap (SEO audit 2026-10-12).
 `MIN_JOBS_PER_PAGE` is a setting, never a hard-coded number: **1 locally** (`.env.local`, so every
 page type can be built with only ~100 dev jobs) and **3 in production** (TrueFoundry environment variable).
 Hidden jobs (`hidden = true`) never count toward any page, count or pay figure.
@@ -432,6 +434,8 @@ the top 15 states, empty state "No open jobs here yet". Pay format `$85,000–$1
    `/api`, the sitemap and anything reading the logged-in user stay dynamic. Check that hiding a job
    in `/admin` still removes it from the site within 15 minutes. If revalidation causes problems with
    Payload, keep `force-dynamic` and tell me.
+   `expireTime: 1800` in `next.config.ts`: cached pages send `s-maxage=900, stale-while-revalidate=900`,
+   so a CDN (CloudFront) serves an old copy for at most 30 minutes (Next.js's default was one year).
 8. **Google Search Console (Day 7, after the domain is live):** verify the domain, submit
    `SITE_URL/sitemap.xml`, and note it in Notes.
 Our unique value for Google is everything around the copied employer description: the summary, pay

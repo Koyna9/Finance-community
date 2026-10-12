@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { cache } from "react";
 import { MIN_PAY_LISTINGS } from "@/components/PayStrip";
-import { getCompanyInfo, getGroupCounts, getJobList, getPayStats } from "@/lib/db";
+import { getCompanyInfo, getGroupCounts, getJobList, getPayStats, minJobsPerPage } from "@/lib/db";
 import { categoryInfo } from "@/lib/format";
 import { companyDescription, companyIntro, companyTitle } from "@/lib/seo";
 import {
@@ -16,7 +16,9 @@ import {
 } from "../../[listing]/listing";
 
 // /companies/<company-slug>: the company's open jobs (CLAUDE.md section 9).
-// Exists while the company has at least one open job (the /companies index lists the same).
+// Exists while the company has at least one open job (the /companies index lists the same), because
+// its job pages link to it. With fewer than MIN_JOBS_PER_PAGE open jobs it is a thin page: it stays
+// for visitors but gets "noindex, follow" and is left out of the sitemap.
 export const dynamic = "force-dynamic";
 
 const TOP_PLACES_IN_INTRO = 3;
@@ -36,11 +38,12 @@ const loadCompany = cache(async (companySlug: string, pageText: string | null): 
 	const totalPages = totalPagesFor(list.total);
 	if (page > totalPages) notFound();
 
-	const [pay, states, categories, companies] = await Promise.all([
+	const [pay, states, categories, companies, min] = await Promise.all([
 		getPayStats(filter),
 		getGroupCounts("state", filter, 1),
 		getGroupCounts("category", filter, 1),
 		getGroupCounts("company", {}, 1),
+		minJobsPerPage(),
 	]);
 	// LinkedIn size already reads like "501-1,000 employees".
 	const size = info.size ? (/employees/i.test(info.size) ? info.size : `${info.size} employees`) : null;
@@ -81,6 +84,7 @@ const loadCompany = cache(async (companySlug: string, pageText: string | null): 
 				more: { href: "/companies", label: "All companies" },
 			},
 		],
+		noindex: list.total < min,
 	};
 });
 

@@ -28,7 +28,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 			getGroupCounts("category", { remote: true }),
 			getSitemapPlaces(),
 			getGroupCounts("title"),
-			getGroupCounts("company", {}, 1),
+			getGroupCounts("company"), // MIN_JOBS_PER_PAGE+: thinner company pages are noindex
 			getPayByGroup("category", {}, MIN_PAY_LISTINGS),
 			getSitemapJobs(),
 		]);

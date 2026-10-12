@@ -119,6 +119,7 @@ export type ListingData = {
 	pay: PayStats | null;
 	salary: { href: string; label: string };
 	boxes: Box[];
+	noindex?: boolean; // page stays for visitors but is not indexed (thin company pages)
 };
 
 // ?page=… -> "2", null when absent, "" (invalid) when given twice.
@@ -383,6 +384,7 @@ export function listingMetadata(d: ListingData): Metadata {
 		title: (d.seoTitle ?? d.h1) + pageSuffix(d.page),
 		description: d.description,
 		alternates: { canonical: canonicalUrl(d.path, d.page) },
+		...(d.noindex ? { robots: { index: false, follow: true } } : {}),
 	};
 }
 
