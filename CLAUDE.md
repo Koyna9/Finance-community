@@ -833,3 +833,31 @@ Notes / decisions log (append here):
     kept; a password with special characters (p@ss:w/rd#1?&=%x, URL-encoded) works, a wrong one is
     refused. Release (463 jobs), create-admin, sync and the site ran over `?sslmode=require`; the database
     showed every connection encrypted (TLS 1.3). Local site unchanged.
+- 2026-10-12 — **STATE: LIVE on TrueFoundry** at https://dev-job-portal.adoptapp.ai (NOT the final domain; the final one isn't released yet),
+  deployed by Rahul (manager) from PR #1 (`finance-community-first-commit` → `dev`, 21 commits, last `f8f1538`).
+  AWS: RDS PostgreSQL (SSL via `?sslmode=require` in `DATABASE_URL`), CloudFront CDN in front of the site.
+  Database came from my local dump (452 open jobs live). Working folder: `~/Desktop/finance-community`
+  (the old `finance-jobs` folder is only a backup). All production settings live ONLY in TrueFoundry
+  (never in `.env.local`/git: the image ignores `.env*`); full list: DEPLOY.md section 2.
+  - Fixed today: `SITE_URL` was `http://localhost:3000` on the live site (sitemap + canonicals showed
+    localhost). Now set to `https://dev-job-portal.adoptapp.ai`: sitemap (1,848 URLs incl. 452 jobs),
+    home and list pages are correct. Changing the domain later = change `SITE_URL` + restart (no code).
+  - Still open (checked 2026-10-12 15:41 UTC, read-only):
+    1. Many job pages and /salaries/[category] still have a `localhost` canonical: copies cached before the
+       fix (Next.js 15-min page cache + CloudFront, which honours `s-maxage=900, stale-while-revalidate`).
+       They refresh on visits; to clear at once: CloudFront invalidation `/*` + restart the site Service.
+    2. NOT done yet, on purpose (waiting for the final domain): `ALLOW_INDEXING=true` and the CloudFront
+       invalidation. Until then robots.txt `Disallow: /` + `X-Robots-Tag: noindex` everywhere (correct).
+       When the final domain is released, in this order: set `SITE_URL` to it + `ALLOW_INDEXING=true` on the
+       site Service → restart → THEN CloudFront invalidation `/*` (invalidating first would let CloudFront
+       re-cache pages with noindex/old canonicals and need a second invalidation).
+    3. Then verify live (sitemap hosts, robots.txt shows Allow + sitemap, no noindex header, canonicals),
+       then Day 7 / SEO rule 8: Google Search Console (verify domain, submit SITE_URL/sitemap.xml),
+       Rich Results Test on 2 live job pages.
+  - Note: CloudFront also caches job pages (≤15 min), so a job hidden in /admin can show on the CDN for
+    up to ~15 min (within SEO rule 7).
+  - Reminders: trial ends 2026-10-13 11:20 UTC → set `MAX_JOBS_PER_RUN=0` on the sync Job; remove
+    `SYNC_TIME_FRAME`/`EXPIRED_TIME_FRAME` from the sync Job after its first run; delete
+    `~/Desktop/finance-db-dump/` and `~/Desktop/finance-production-env/` once Rahul confirms (they hold
+    secrets); local branch `backup-before-ssl-fix` can be deleted. Progress section 13 not yet updated
+    for Day 6/7.
