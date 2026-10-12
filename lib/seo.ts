@@ -2,7 +2,7 @@
 // The root layout adds " — <SITE_NAME>" to every title (except the home page's absolute title).
 
 import type { Job, PayStats } from "@/lib/db";
-import { categoryInfo, joinAnd, paragraphs, payFull, placeLabel, shortUsd } from "@/lib/format";
+import { categoryInfo, joinAnd, paragraphs, payFull, placeLabel, shortUsd, shownEmploymentTypes } from "@/lib/format";
 import { stateCode } from "@/shared/states.js";
 import { SITE_NAME, siteUrl } from "@/lib/site";
 
@@ -158,8 +158,9 @@ function isoUtc(value: string): string | null {
 	return Number.isNaN(d.getTime()) ? null : d.toISOString();
 }
 
-// Google for Jobs markup for an OPEN job, built only from data we have (fields we lack are left out:
-// no validThrough, no employmentType). Returns null for closed jobs or jobs without a description.
+// Google for Jobs markup for an OPEN job, built only from data we have (fields we lack are left out,
+// e.g. no validThrough: we don't know a real end date). employmentType and hiringOrganization.sameAs
+// only when known. Returns null for closed jobs or jobs without a description.
 export function jobPostingJsonLd(job: Job): Record<string, unknown> | null {
 	if (job.status !== "open") return null;
 	// Description text with its line breaks as HTML paragraphs (falls back to the summary).
@@ -176,10 +177,14 @@ export function jobPostingJsonLd(job: Job): Record<string, unknown> | null {
 	};
 	const posted = job.date_posted ? isoUtc(job.date_posted) : null;
 	if (posted) data.datePosted = posted;
+	// The same types the job page shows as a chip ("OTHER" left out).
+	const types = shownEmploymentTypes(job.employment_type);
+	if (types.length) data.employmentType = types.length === 1 ? types[0] : types;
 	if (job.company) {
 		data.hiringOrganization = {
 			"@type": "Organization",
 			name: job.company,
+			...(job.company_website ? { sameAs: job.company_website } : {}),
 			...(job.logo ? { logo: job.logo } : {}),
 		};
 	}

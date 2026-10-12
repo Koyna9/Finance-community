@@ -81,6 +81,26 @@ export function workStyleLabel(value: string | null): string | null {
 	return value ? (WORK_STYLE[value] ?? value) : null;
 }
 
+// employmentType values (Google's) -> chip text. "OTHER" is not shown (and not in JobPosting).
+export const EMPLOYMENT_TYPE_LABELS: Record<string, string> = {
+	FULL_TIME: "Full-time",
+	PART_TIME: "Part-time",
+	CONTRACTOR: "Contract",
+	TEMPORARY: "Temporary",
+	INTERN: "Internship",
+};
+
+// The job's employment types we show and mark up, e.g. ["INTERN", "FULL_TIME"].
+export function shownEmploymentTypes(values: string[]): string[] {
+	return values.filter((v) => v in EMPLOYMENT_TYPE_LABELS);
+}
+
+// "Full-time", "Internship · Full-time", or null when unknown.
+export function employmentTypeLabel(values: string[]): string | null {
+	const shown = shownEmploymentTypes(values).map((v) => EMPLOYMENT_TYPE_LABELS[v]);
+	return shown.length ? shown.join(" · ") : null;
+}
+
 // ---- Pay -------------------------------------------------------------------------------------
 
 // $165K, $82K, $1.2M

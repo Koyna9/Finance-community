@@ -21,6 +21,7 @@ import {
 } from "@/lib/db";
 import {
 	categoryInfo,
+	employmentTypeLabel,
 	levelLabel,
 	paragraphs,
 	payFull,
@@ -93,6 +94,7 @@ export default async function JobPage({ params }: Props) {
 
 	const pay = payFull(job.pay_min, job.pay_max);
 	const workStyle = workStyleLabel(job.work_arrangement);
+	const employment = employmentTypeLabel(job.employment_type); // also in JobPosting (employmentType)
 	const posted = timeAgoLong(job.date_posted);
 	const requirements = sentences(job.requirements);
 	const description = paragraphs(job.description);
@@ -126,6 +128,7 @@ export default async function JobPage({ params }: Props) {
 										{placeLabel(job)}
 									</Chip>
 									{workStyle && <Chip large>{workStyle}</Chip>}
+									{employment && <Chip large>{employment}</Chip>}
 									<Chip large>{levelLabel(job.level, true)}</Chip>
 									{cat && <Chip large>{cat.label}</Chip>}
 									{posted && <span className="px-1 py-1.5 text-sm text-muted">Posted {posted}</span>}

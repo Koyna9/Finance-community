@@ -27,6 +27,7 @@ export type Job = {
 	logo: string | null;
 	company_industry: string | null;
 	company_size: string | null;
+	company_website: string | null;
 	category: string;
 	level: string;
 	state: string | null;
@@ -35,6 +36,7 @@ export type Job = {
 	city_slug: string | null;
 	is_remote: number;
 	work_arrangement: string | null;
+	employment_type: string[]; // FULL_TIME, PART_TIME, ... (empty when unknown)
 	pay_min: number | null;
 	pay_max: number | null;
 	summary: string | null;
@@ -71,6 +73,7 @@ function toJob(d: JobDoc): Job {
 		logo: d.logo ?? null,
 		company_industry: d.companyIndustry ?? null,
 		company_size: d.companySize ?? null,
+		company_website: d.companyWebsite ?? null,
 		category: d.category,
 		level: d.level,
 		state: d.state ?? null,
@@ -79,6 +82,7 @@ function toJob(d: JobDoc): Job {
 		city_slug: d.citySlug ?? null,
 		is_remote: d.isRemote ? 1 : 0,
 		work_arrangement: d.workArrangement ?? null,
+		employment_type: d.employmentType ?? [],
 		pay_min: d.payMin ?? null,
 		pay_max: d.payMax ?? null,
 		summary: d.summary ?? null,

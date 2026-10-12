@@ -22,7 +22,7 @@ const PREFIX = "fc:";
 const VERSION_KEY = `${PREFIX}ver`;
 // Raise this when a lib/db.ts function changes its return shape, so a new deploy never reads
 // entries written by the old code.
-const SCHEMA = 1;
+const SCHEMA = 2;
 const TTL_SECONDS = positiveInt(process.env.CACHE_TTL_SECONDS, 900);
 const OP_TIMEOUT_MS = 250; // longest we wait for one Redis command
 const CONNECT_TIMEOUT_MS = 1000;

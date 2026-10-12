@@ -422,12 +422,14 @@ the top 15 states, empty state "No open jobs here yet". Pay format `$85,000–$1
    and job pages. (Day 4)
 4. **JobPosting structured data** (JSON-LD) on OPEN job pages only, so jobs can appear in Google
    for Jobs. Only real data, never invented: `title`, `description` (the description text with its
-   line breaks as HTML paragraphs), `datePosted`, `hiringOrganization` (`name`, `logo` when we have
-   it), `jobLocation` (`addressLocality` = city, `addressRegion` = 2-letter state code,
+   line breaks as HTML paragraphs), `datePosted`, `hiringOrganization` (`name`, `logo` and `sameAs` =
+   company website when we have them), `employmentType` when known (same as the job page's chip;
+   "OTHER" left out; added 2026-10-13), `jobLocation` (`addressLocality` = city, `addressRegion` = 2-letter state code,
    `addressCountry` = "US"); for `Remote Solely` jobs use `jobLocationType: "TELECOMMUTE"` plus
    `applicantLocationRequirements` = Country "US"; `baseSalary` only when the employer states pay
    (`currency` USD, `unitText` YEAR, `minValue`/`maxValue`); `directApply: false`. Leave out any
-   field we don't have (e.g. no `validThrough`, no `employmentType`). Use Google's structured-data
+   field we don't have (e.g. no `validThrough`: we never know a real end date, and inventing one
+   breaks "never invented"; closed jobs lose the markup the night they close). Use Google's structured-data
    guidelines for job postings; after go-live, test a few job pages in Google's Rich Results Test. (Day 5)
 5. **Closed jobs:** the job page stays (HTTP 200) with "This role has closed" + 5 similar open jobs,
    but gets `robots: noindex`, has NO JobPosting markup, and is not in the sitemap.
