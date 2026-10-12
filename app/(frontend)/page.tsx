@@ -345,8 +345,11 @@ export default async function Home() {
 							/>
 						</SidebarBox>
 						<section aria-labelledby="pay" className="group/pay flex flex-col gap-2 rounded-[10px] bg-accent-tint p-5">
-							<h2 id="pay" className="flex items-center gap-2 text-lg font-bold">
-								What finance roles pay
+							{/* The coin sits next to the heading, not inside it, so the heading text stays "What finance roles pay" */}
+							<div className="flex items-center gap-2">
+								<h2 id="pay" className="text-lg font-bold">
+									What finance roles pay
+								</h2>
 								{/* "$" coin: pops in while the box is hovered (or its link focused) and keeps turning left to right */}
 								<span
 									aria-hidden="true"
@@ -356,7 +359,7 @@ export default async function Home() {
 										$
 									</span>
 								</span>
-							</h2>
+							</div>
 							<p className="text-[15px] leading-normal text-accent-tint-text">
 								Pay ranges by role and state, built only from listings where the employer states pay.
 							</p>

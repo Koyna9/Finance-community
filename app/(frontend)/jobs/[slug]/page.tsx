@@ -245,8 +245,11 @@ export default async function JobPage({ params }: Props) {
 					{/* Same look as SidebarBox, plus the home page's "$" coin in the heading */}
 					{cat && rolePay && (
 						<section aria-labelledby="role-pay" className="group/pay rounded-[10px] border border-border bg-surface p-5">
-							<h2 id="role-pay" className="mb-3 flex items-center gap-2 text-[17px] font-bold">
-								Compare {roleLabel} salaries
+							{/* The coin sits next to the heading, not inside it, so the heading text stays clean */}
+							<div className="mb-3 flex items-center gap-2">
+								<h2 id="role-pay" className="text-[17px] font-bold">
+									Compare {roleLabel} salaries
+								</h2>
 								{/* "$" coin: pops in while the box is hovered (or its link focused) and keeps turning left to right */}
 								<span
 									aria-hidden="true"
@@ -256,7 +259,7 @@ export default async function JobPage({ params }: Props) {
 										$
 									</span>
 								</span>
-							</h2>
+							</div>
 							<div className="flex flex-col gap-0.5">
 								<span className="text-[13px] text-muted">US median pay</span>
 								<span className="font-mono text-[22px] font-semibold text-accent-text">{shortUsd(rolePay.median)}</span>
