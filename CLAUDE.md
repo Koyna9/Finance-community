@@ -399,9 +399,13 @@ page type can be built with only ~100 dev jobs) and **3 in production** (TrueFou
 Hidden jobs (`hidden = true`) never count toward any page, count or pay figure.
 
 **Every list page shows:**
-- An H1 and `<title>` with the count and place, e.g. "37 FP&A Jobs in Austin, TX" and
-  meta description like "Browse 37 open FP&A jobs in Austin, Texas from companies hiring now. Pay range $85K–$130K."
-  (built in `lib/seo.ts`).
+- Keyword first (SEO audit 2026-10-12, 3.1; changed 2026-10-13): H1 "FP&A Jobs in Austin, TX",
+  `<title>` "FP&A Jobs in Austin, TX: 37 Open Roles", meta description like "Browse 37 open FP&A jobs
+  in Austin, Texas. Pay range $85K–$130K. Hiring now: Acme, Beta and Gamma." (built in `lib/seo.ts`;
+  the count stays in the intro sentence under the H1).
+- An "At a glance" box at the top of the sidebar (`components/ListFacts.tsx`, `getListFacts`): open
+  jobs by level, fully remote share, posted in the last 7 days, top hiring companies (linked); rows
+  that say nothing are left out. Unique, true numbers per page (audit section 2).
 - The job list, newest first, 50 per page (`?page=2` is fine for pagination only).
 - **Internal links** (this replaces any dropdown): on `/fpa-jobs` a "FP&A jobs by state" list
   linking to each `/fpa-jobs/[state]` that passes the thin-page rule, with counts; on a state page

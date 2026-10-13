@@ -87,18 +87,30 @@ export function homeDescription(openJobs: number): string {
 
 // ---- List pages (Day 4) ----------------------------------------------------------------------
 
-// "37 FP&A Jobs in Austin, TX" / "104 Finance Jobs in the US"
+// H1, keyword first (SEO audit 2026-10-12, 3.1): "FP&A Jobs in Austin, TX" / "Finance Jobs in the US".
 // what: "FP&A Jobs", "Finance Jobs", "Entry Level Finance Jobs"; place: "Austin, TX" or null (US).
-export function listTitle(count: number, what: string, place: string | null): string {
-	return `${countJobs(count, what)} ${place ? `in ${place}` : "in the US"}`;
+export function listTitle(what: string, place: string | null): string {
+	return `${what} ${place ? `in ${place}` : "in the US"}`;
 }
 
-// "Browse 37 open FP&A jobs in Austin, Texas from companies hiring now. Pay range $85K–$130K."
-// what: "FP&A jobs", "finance jobs"; placeLong: "Austin, Texas" or null (US).
-export function listDescription(count: number, what: string, placeLong: string | null, pay: PayStats | null): string {
+// <title> of a list page: the H1 plus the count, "FP&A Jobs in Austin, TX: 37 Open Roles".
+export function listMetaTitle(h1: string, count: number): string {
+	return `${h1}: ${count} Open ${count === 1 ? "Role" : "Roles"}`;
+}
+
+// "Browse 37 open FP&A jobs in Austin, Texas. Pay range $85K–$130K. Hiring now: Acme, Beta and Gamma."
+// what: "FP&A jobs", "finance jobs"; placeLong: "Austin, Texas" or null (US); employers: biggest first.
+export function listDescription(
+	count: number,
+	what: string,
+	placeLong: string | null,
+	pay: PayStats | null,
+	employers: string[] = [],
+): string {
 	const where = placeLong ? `in ${placeLong}` : "across the US";
 	const payText = pay && pay.withPay >= 5 ? ` Pay range ${shortUsd(pay.low)}–${shortUsd(pay.high)}.` : "";
-	return trimTo(`Browse ${count} open ${countJobs(count, what).replace(/^\d+ /, "")} ${where} from companies hiring now.${payText}`);
+	const hiring = employers.length ? ` Hiring now: ${joinAnd(employers.slice(0, 3))}.` : " From companies hiring now.";
+	return trimTo(`Browse ${count} open ${countJobs(count, what).replace(/^\d+ /, "")} ${where}.${payText}${hiring}`);
 }
 
 // Default intro under the H1 (when the admin has not written one):
@@ -112,9 +124,9 @@ export function listIntro(count: number, what: string, placeLong: string | null,
 
 // ---- Company pages ---------------------------------------------------------------------------
 
-// "5 Finance Jobs at Stripe"
-export function companyTitle(count: number, company: string): string {
-	return `${countJobs(count, "Finance Jobs")} at ${company}`;
+// H1, keyword first: "Finance Jobs at Stripe" (the <title> adds the count: listMetaTitle).
+export function companyTitle(company: string): string {
+	return `Finance Jobs at ${company}`;
 }
 
 // "Browse 5 open finance jobs at Stripe (Financial Services). Apply on Stripe's own careers site. Pay range …"

@@ -110,7 +110,8 @@ Finance Leadership "CFO, VP and head of finance".
 **List pages** — from `listing-fpa-texas.mockup.html` (built on Day 4, same components)
 White top band: breadcrumbs, H1 ("FP&A Jobs in Texas"), one-sentence intro with count and top
 cities, PayStrip. Then two columns: "N jobs · newest first" + full JobCards + pagination;
-sidebar: by-city (or by-state) links with counts (only pages passing the thin-page rule),
+sidebar: "At a glance" box first (by level, fully remote, posted in the last 7 days, top hiring
+companies; added 2026-10-13), then by-city (or by-state) links with counts (only pages passing the thin-page rule),
 "Other finance jobs in <place>" pill links, "<Role> jobs in other states" 2-column grid.
 
 **Job page (`/jobs/[slug]`)** — from `job.mockup.html`

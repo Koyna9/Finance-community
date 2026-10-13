@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { cache } from "react";
 import { MIN_PAY_LISTINGS } from "@/components/PayStrip";
-import { getGroupCounts, getJobList, getPayStats, minJobsPerPage } from "@/lib/db";
+import { getGroupCounts, getJobList, getListFacts, getPayStats, minJobsPerPage } from "@/lib/db";
 import { categoryInfo } from "@/lib/format";
 import { listDescription, listIntro, listTitle } from "@/lib/seo";
 import {
@@ -37,21 +37,23 @@ const loadTitle = cache(async (titleSlug: string, pageText: string | null): Prom
 	if (page > totalPages || list.jobs.length === 0) notFound();
 
 	const name = list.jobs[0].clean_title; // "Financial Analyst"
-	const [pay, states, titles, categories] = await Promise.all([
+	const [pay, states, titles, categories, facts] = await Promise.all([
 		getPayStats(filter),
 		getGroupCounts("state", filter, 1),
 		getGroupCounts("title"),
 		getGroupCounts("category", filter, 1),
+		getListFacts(filter),
 	]);
+	const employers = facts.topCompanies.map((c) => c.label);
 	return {
 		path: `/titles/${titleSlug}`,
 		page,
 		totalPages,
 		total: list.total,
 		jobs: list.jobs,
-		h1: listTitle(list.total, `${name} Jobs`, null),
+		h1: listTitle(`${name} Jobs`, null),
 		seoTitle: null,
-		description: listDescription(list.total, `${name} jobs`, null, pay),
+		description: listDescription(list.total, `${name} jobs`, null, pay, employers),
 		intro: listIntro(list.total, `${name} jobs`, null, states.slice(0, TOP_PLACES_IN_INTRO).map((s) => s.label)),
 		crumbs: [{ label: "Job titles", href: "/titles" }, { label: name }],
 		pay: pay && pay.withPay >= MIN_PAY_LISTINGS ? pay : null,
@@ -77,6 +79,7 @@ const loadTitle = cache(async (titleSlug: string, pageText: string | null): Prom
 				more: { href: "/titles", label: "All job titles" },
 			},
 		],
+		facts: { data: facts, show: { levels: true, remote: true, companies: true } },
 	};
 });
 

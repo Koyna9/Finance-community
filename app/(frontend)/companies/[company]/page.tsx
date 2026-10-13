@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { cache } from "react";
 import { MIN_PAY_LISTINGS } from "@/components/PayStrip";
-import { getCompanyInfo, getGroupCounts, getJobList, getPayStats, minJobsPerPage } from "@/lib/db";
+import { getCompanyInfo, getGroupCounts, getJobList, getListFacts, getPayStats, minJobsPerPage } from "@/lib/db";
 import { categoryInfo } from "@/lib/format";
 import { companyDescription, companyIntro, companyTitle } from "@/lib/seo";
 import {
@@ -38,12 +38,13 @@ const loadCompany = cache(async (companySlug: string, pageText: string | null): 
 	const totalPages = totalPagesFor(list.total);
 	if (page > totalPages) notFound();
 
-	const [pay, states, categories, companies, min] = await Promise.all([
+	const [pay, states, categories, companies, min, facts] = await Promise.all([
 		getPayStats(filter),
 		getGroupCounts("state", filter, 1),
 		getGroupCounts("category", filter, 1),
 		getGroupCounts("company", {}, 1),
 		minJobsPerPage(),
+		getListFacts(filter),
 	]);
 	// LinkedIn size already reads like "501-1,000 employees".
 	const size = info.size ? (/employees/i.test(info.size) ? info.size : `${info.size} employees`) : null;
@@ -55,7 +56,7 @@ const loadCompany = cache(async (companySlug: string, pageText: string | null): 
 		totalPages,
 		total: list.total,
 		jobs: list.jobs,
-		h1: companyTitle(list.total, info.company),
+		h1: companyTitle(info.company),
 		seoTitle: null,
 		description: companyDescription(list.total, info.company, info.industry, pay),
 		intro:
@@ -85,6 +86,7 @@ const loadCompany = cache(async (companySlug: string, pageText: string | null): 
 			},
 		],
 		noindex: list.total < min,
+		facts: { data: facts, show: { levels: true, remote: true, companies: false } },
 	};
 });
 

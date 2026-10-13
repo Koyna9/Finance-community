@@ -270,6 +270,42 @@ export async function countJobs(f: ListFilter): Promise<number> {
 	});
 }
 
+// "At a glance" facts for a list page (SEO audit 2026-10-12, section 2: unique, true content per page):
+// open jobs per level, how many are fully remote, how many were posted in the last 7 days, and the
+// companies with the most open jobs (biggest first).
+export type ListFacts = {
+	total: number;
+	levels: Record<string, number>;
+	remote: number;
+	newThisWeek: number;
+	topCompanies: CountRow[];
+};
+
+export async function getListFacts(f: ListFilter): Promise<ListFacts> {
+	return cached("getListFacts", [f], async () => {
+		const values: unknown[] = [];
+		const where = filterSql(f, values);
+		const [rows, companies] = await Promise.all([
+			sql<{ level: string; n: number; remote: number; recent: number }>(
+				`SELECT level::text AS level, COUNT(*)::int AS n,
+            COUNT(*) FILTER (WHERE is_remote)::int AS remote,
+            COUNT(*) FILTER (WHERE date_posted >= now() - interval '7 days')::int AS recent
+     FROM jobs WHERE ${where} GROUP BY level`,
+				values,
+			),
+			getGroupCounts("company", f, 1),
+		]);
+		const sum = (k: "n" | "remote" | "recent") => rows.reduce((s, r) => s + r[k], 0);
+		return {
+			total: sum("n"),
+			levels: Object.fromEntries(rows.map((r) => [r.level, r.n])),
+			remote: sum("remote"),
+			newThisWeek: sum("recent"),
+			topCompanies: companies.slice(0, 5),
+		};
+	});
+}
+
 // State and city names for slugs (from open jobs), e.g. { state: "Texas", city: "Austin" }.
 export async function getPlaceNames(
 	stateSlug: string,

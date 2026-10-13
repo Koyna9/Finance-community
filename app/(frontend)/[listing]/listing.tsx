@@ -12,6 +12,7 @@ import { notFound } from "next/navigation";
 import { cache } from "react";
 import Breadcrumbs, { type Crumb } from "@/components/Breadcrumbs";
 import JobCard from "@/components/JobCard";
+import ListFacts from "@/components/ListFacts";
 import PayStrip, { MIN_PAY_LISTINGS } from "@/components/PayStrip";
 import PlaceLinks from "@/components/PlaceLinks";
 import type { SidebarLink } from "@/components/SidebarBox";
@@ -22,11 +23,13 @@ import {
 	getGroupCounts,
 	getJobList,
 	getLevelCounts,
+	getListFacts,
 	getPayStats,
 	getPlaceNames,
 	minJobsPerPage,
 	type CountRow,
 	type JobCardRow,
+	type ListFacts as ListFactsData,
 	type ListFilter,
 	type PayStats,
 } from "@/lib/db";
@@ -39,7 +42,7 @@ import {
 	levelPath,
 	type CategoryInfo,
 } from "@/lib/format";
-import { canonicalUrl, listDescription, listIntro, listTitle, pageSuffix } from "@/lib/seo";
+import { canonicalUrl, listDescription, listIntro, listMetaTitle, listTitle, pageSuffix } from "@/lib/seo";
 
 export const PER_PAGE = 50;
 const TOP_PLACES_IN_INTRO = 3;
@@ -120,6 +123,8 @@ export type ListingData = {
 	salary: { href: string; label: string };
 	boxes: Box[];
 	noindex?: boolean; // page stays for visitors but is not indexed (thin company pages)
+	// "At a glance" box: which rows make sense on this page type.
+	facts?: { data: ListFactsData; show: { levels: boolean; remote: boolean; companies: boolean } };
 };
 
 // ?page=… -> "2", null when absent, "" (invalid) when given twice.
@@ -177,23 +182,25 @@ export const loadListing = cache(
 		const statePath = place !== null ? `${scope.path}/${place}` : scope.path;
 		const path = city !== null ? `${statePath}/${city}` : statePath;
 
-		// Titles: "37 FP&A Jobs in Austin, TX", "6 Remote Finance Jobs in the US".
+		// H1: "FP&A Jobs in Austin, TX", "Remote Finance Jobs in the US" (the <title> adds the count).
 		const what = remote ? `Remote ${scope.what}` : scope.what;
 		const whatLower = remote ? `remote ${scope.whatLower}` : scope.whatLower;
 		const placeShort = state ? cityStateLabel(cityName, state) : null;
 		const placeLong = state ? (cityName ? `${cityName}, ${state}` : state) : null;
-		const h1 = listTitle(list.total, what, placeShort);
+		const h1 = listTitle(what, placeShort);
 
 		const crumbs: Crumb[] = [{ label: `${scope.role} jobs`, href: place !== null ? scope.path : undefined }];
 		if (remote) crumbs.push({ label: "Remote" });
 		if (state) crumbs.push({ label: state, href: cityName ? statePath : undefined });
 		if (cityName) crumbs.push({ label: cityName });
 
-		const [pay, cms, sidebar] = await Promise.all([
+		const [pay, cms, sidebar, facts] = await Promise.all([
 			getPayStats(filter),
 			scope.category && place === null ? getCategoryPageText(scope.category.key) : null,
 			loadSidebar(scope, filter, { place, city, remote, state, cityName, min }),
+			getListFacts(filter),
 		]);
+		const employers = facts.topCompanies.map((c) => c.label);
 
 		return {
 			path,
@@ -203,12 +210,13 @@ export const loadListing = cache(
 			jobs: list.jobs,
 			h1,
 			seoTitle: cms?.seoTitle ?? null,
-			description: cms?.seoDescription ?? listDescription(list.total, whatLower, placeLong, pay),
+			description: cms?.seoDescription ?? listDescription(list.total, whatLower, placeLong, pay, employers),
 			intro: cms?.intro ?? listIntro(list.total, whatLower, placeLong, sidebar.topPlaces),
 			crumbs,
 			pay: pay && pay.withPay >= MIN_PAY_LISTINGS ? pay : null,
 			salary: scope.salary,
 			boxes: sidebar.boxes,
+			facts: { data: facts, show: { levels: !scope.isLevel, remote: !remote, companies: true } },
 		};
 	},
 );
@@ -379,9 +387,10 @@ export function nationalRoleLinks(counts: Record<string, number>): SidebarLink[]
 
 // ---- Metadata (SEO rules 1–2) --------------------------------------------------------------
 
+// <title>: the admin's SEO title, else "FP&A Jobs in Austin, TX: 37 Open Roles" (keyword first).
 export function listingMetadata(d: ListingData): Metadata {
 	return {
-		title: (d.seoTitle ?? d.h1) + pageSuffix(d.page),
+		title: (d.seoTitle ?? listMetaTitle(d.h1, d.total)) + pageSuffix(d.page),
 		description: d.description,
 		alternates: { canonical: canonicalUrl(d.path, d.page) },
 		...(d.noindex ? { robots: { index: false, follow: true } } : {}),
@@ -422,6 +431,7 @@ export function ListingPage({ data: d }: { data: ListingData }) {
 				</div>
 
 				<aside className="flex min-w-0 flex-[1_1_300px] flex-col gap-5">
+					{d.facts && <ListFacts facts={d.facts.data} show={d.facts.show} />}
 					{d.boxes.map((b) => (
 						<PlaceLinks key={b.id} {...b} />
 					))}
