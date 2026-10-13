@@ -436,6 +436,9 @@ per hour/month stays that way (`$25–$32` per hour, card `$25–$32/hr`). Salar
    list, which is canonical to itself (`/fpa-jobs?page=2`) and gets "— Page 2" in its `<title>`. (Day 4)
 2. **Real status codes:** unknown slugs, thin pages (below `MIN_JOBS_PER_PAGE`) and hidden jobs
    return a real HTTP 404, never a 200 "not found" page. (Day 4)
+   Uppercase addresses (changed 2026-10-13, SEO audit 1.7; were 404): `proxy.ts` answers 301 to the
+   lowercase address on `SITE_URL` (query kept), e.g. `/FPA-Jobs/Texas` → `/fpa-jobs/texas`.
+   `/admin` and `/api` are left alone.
 3. **BreadcrumbList structured data** (JSON-LD) matching the visible breadcrumbs, on list pages
    and job pages. (Day 4) The home page also has `WebSite` + `Organization` (name `SITE_NAME`,
    logo `public/logo.png`, 512 px; no SearchAction: no search box) (SEO audit 2026-10-12).
