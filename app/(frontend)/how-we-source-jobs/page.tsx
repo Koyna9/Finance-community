@@ -3,7 +3,7 @@ import Link from "next/link";
 import InfoPage, { InfoSection } from "@/components/InfoPage";
 import { MIN_PAY_LISTINGS } from "@/components/PayStrip";
 import { CATEGORY_LIST } from "@/lib/format";
-import { canonicalUrl } from "@/lib/seo";
+import { canonicalUrl, socialMetadata } from "@/lib/seo";
 import { SITE_NAME } from "@/lib/site";
 
 // How we source jobs (SEO audit 2026-10-12, section 6): where the jobs come from, how they are
@@ -14,13 +14,11 @@ export const dynamic = "force-dynamic";
 const PATH = "/how-we-source-jobs";
 
 export async function generateMetadata(): Promise<Metadata> {
-	return {
-		title: "How We Source Jobs",
-		description:
-			"Where our finance jobs come from: employers' own careers sites, checked every night for closed jobs. " +
-			"Pay only when the employer states it, never estimated.",
-		alternates: { canonical: canonicalUrl(PATH) },
-	};
+	const title = "How We Source Jobs";
+	const description =
+		"Where our finance jobs come from: employers' own careers sites, checked every night for closed jobs. " +
+		"Pay only when the employer states it, never estimated.";
+	return { title, description, alternates: { canonical: canonicalUrl(PATH) }, ...socialMetadata(title, description, PATH) };
 }
 
 export default function HowWeSourceJobsPage() {

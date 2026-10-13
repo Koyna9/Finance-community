@@ -14,7 +14,7 @@ import {
 	minJobsPerPage,
 } from "@/lib/db";
 import { CATEGORY_LIST, LEVELS, levelLabel, levelPath } from "@/lib/format";
-import { canonicalUrl, homeDescription, homeJsonLd, homeTitle } from "@/lib/seo";
+import { canonicalUrl, homeDescription, homeJsonLd, homeTitle, socialMetadata } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -32,10 +32,12 @@ const QUICK_LINKS = [
 // Headline, subline and meta description can be edited in /admin (Site Text); empty = the text below.
 export async function generateMetadata(): Promise<Metadata> {
 	const [stats, siteText] = await Promise.all([getSiteStats(), getSiteText()]);
+	const description = siteText.defaultSeoDescription ?? homeDescription(stats.open);
 	return {
 		title: { absolute: homeTitle() },
-		description: siteText.defaultSeoDescription ?? homeDescription(stats.open),
+		description,
 		alternates: { canonical: canonicalUrl("/") },
+		...socialMetadata(homeTitle(), description, "/"),
 	};
 }
 

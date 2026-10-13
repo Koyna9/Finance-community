@@ -3,7 +3,7 @@ import Link from "next/link";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import ListFilter from "@/components/ListFilter";
 import { countJobs, getLocations } from "@/lib/db";
-import { canonicalUrl } from "@/lib/seo";
+import { canonicalUrl, socialMetadata } from "@/lib/seo";
 import { stateCode } from "@/shared/states.js";
 
 // Every state with its open-job count, and its cities with counts (CLAUDE.md section 9).
@@ -15,12 +15,10 @@ const TOP_STATES = 6;
 
 // A function (not a constant), so SITE_URL is read per request, never at build time.
 export async function generateMetadata(): Promise<Metadata> {
-	return {
-		title: "Finance Jobs by US State and City",
-		description:
-			"Browse open finance jobs in every US state and city we cover: accounting, FP&A, tax, audit and more, plus remote roles.",
-		alternates: { canonical: canonicalUrl(PATH) },
-	};
+	const title = "Finance Jobs by US State and City";
+	const description =
+		"Browse open finance jobs in every US state and city we cover: accounting, FP&A, tax, audit and more, plus remote roles.";
+	return { title, description, alternates: { canonical: canonicalUrl(PATH) }, ...socialMetadata(title, description, PATH) };
 }
 
 type State = Awaited<ReturnType<typeof getLocations>>[number];

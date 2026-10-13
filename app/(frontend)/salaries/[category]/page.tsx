@@ -8,7 +8,7 @@ import PayTable from "@/components/PayTable";
 import PlaceLinks from "@/components/PlaceLinks";
 import { getPayByGroup, getPayStats, minJobsPerPage } from "@/lib/db";
 import { CATEGORY_LIST, categoryInfo } from "@/lib/format";
-import { canonicalUrl, salaryDescription, salaryTitle } from "@/lib/seo";
+import { canonicalUrl, salaryDescription, salaryTitle, socialMetadata } from "@/lib/seo";
 
 // Pay for one category: the US figure + a table by state, only states where 5+ jobs state pay
 // (CLAUDE.md section 9). The page exists only when 5+ US jobs in the category state pay.
@@ -36,10 +36,13 @@ const loadSalary = cache(async (key: string) => {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
 	const { cat, pay } = await loadSalary((await params).category);
+	const title = salaryTitle(cat.label, pay);
+	const description = salaryDescription(cat.label, pay, " With pay by state.");
 	return {
-		title: salaryTitle(cat.label, pay),
-		description: salaryDescription(cat.label, pay, " With pay by state."),
+		title,
+		description,
 		alternates: { canonical: canonicalUrl(`/salaries/${cat.key}`) },
+		...socialMetadata(title, description, `/salaries/${cat.key}`, { ownImage: true }),
 	};
 }
 

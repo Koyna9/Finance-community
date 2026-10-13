@@ -32,7 +32,7 @@ import {
 	timeAgoLong,
 	workStyleLabel,
 } from "@/lib/format";
-import { canonicalUrl, jobDescription, jobPostingJsonLd, jobTitle } from "@/lib/seo";
+import { canonicalUrl, jobDescription, jobPostingJsonLd, jobTitle, socialMetadata } from "@/lib/seo";
 
 // SEO rule 7: each job page is rendered on its first visit, then served from Next.js's page cache
 // and refreshed at most every 15 minutes (nothing is rendered at build time: no database needed
@@ -55,6 +55,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 		title: jobTitle(job),
 		description: jobDescription(job),
 		alternates: { canonical: canonicalUrl(`/jobs/${job.slug}`) },
+		...socialMetadata(jobTitle(job), jobDescription(job), `/jobs/${job.slug}`, { ownImage: true }),
 		// Closed jobs stay visible but are not indexed (SEO rule 5).
 		...(job.status === "open" ? {} : { robots: { index: false, follow: true } }),
 	};

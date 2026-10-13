@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import InfoPage, { InfoSection } from "@/components/InfoPage";
 import { CATEGORY_LIST } from "@/lib/format";
-import { canonicalUrl } from "@/lib/seo";
+import { canonicalUrl, socialMetadata } from "@/lib/seo";
 import { SITE_NAME } from "@/lib/site";
 
 // About page (SEO audit 2026-10-12, section 6: who we are and how the site works). Plain text;
@@ -12,12 +12,14 @@ export const dynamic = "force-dynamic";
 const PATH = "/about";
 
 export async function generateMetadata(): Promise<Metadata> {
+	const description =
+		`${SITE_NAME} lists finance jobs at US companies, taken from employers' own careers sites. ` +
+		"Browse by role, location, level, title and company, and apply directly with the employer.";
 	return {
 		title: "About Us", // the layout adds " — <SITE_NAME>"
-		description:
-			`${SITE_NAME} lists finance jobs at US companies, taken from employers' own careers sites. ` +
-			"Browse by role, location, level, title and company, and apply directly with the employer.",
+		description,
 		alternates: { canonical: canonicalUrl(PATH) },
+		...socialMetadata(`About ${SITE_NAME}`, description, PATH),
 	};
 }
 

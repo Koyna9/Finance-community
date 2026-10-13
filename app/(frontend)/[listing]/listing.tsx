@@ -42,7 +42,7 @@ import {
 	levelPath,
 	type CategoryInfo,
 } from "@/lib/format";
-import { canonicalUrl, listDescription, listIntro, listMetaTitle, listTitle, pageSuffix } from "@/lib/seo";
+import { canonicalUrl, listDescription, listIntro, listMetaTitle, listTitle, pageSuffix, socialMetadata } from "@/lib/seo";
 
 export const PER_PAGE = 50;
 const TOP_PLACES_IN_INTRO = 3;
@@ -389,10 +389,12 @@ export function nationalRoleLinks(counts: Record<string, number>): SidebarLink[]
 
 // <title>: the admin's SEO title, else "FP&A Jobs in Austin, TX: 37 Open Roles" (keyword first).
 export function listingMetadata(d: ListingData): Metadata {
+	const title = (d.seoTitle ?? listMetaTitle(d.h1, d.total)) + pageSuffix(d.page);
 	return {
-		title: (d.seoTitle ?? listMetaTitle(d.h1, d.total)) + pageSuffix(d.page),
+		title,
 		description: d.description,
 		alternates: { canonical: canonicalUrl(d.path, d.page) },
+		...socialMetadata(title, d.description, d.path, { page: d.page }),
 		...(d.noindex ? { robots: { index: false, follow: true } } : {}),
 	};
 }

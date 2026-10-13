@@ -1,6 +1,7 @@
 // Page titles and meta descriptions (CLAUDE.md section 9).
 // The root layout adds " — <SITE_NAME>" to every title (except the home page's absolute title).
 
+import type { Metadata } from "next";
 import type { Job, PayStats } from "@/lib/db";
 import {
 	categoryInfo,
@@ -34,6 +35,40 @@ function countJobs(count: number, what: string): string {
 export function canonicalUrl(path: string, page = 1): string {
 	const clean = path.toLowerCase().replace(/\/+$/, "");
 	return `${siteUrl()}${clean}${page > 1 ? `?page=${page}` : ""}`;
+}
+
+// ---- Share previews (SEO audit 2026-10-12, 3.7) ------------------------------------------------
+
+// Open Graph + Twitter tags for LinkedIn, Slack, X, ...: the page's own title, description and
+// canonical URL, with the site-wide picture /og.png. Job and salary pages have their own picture
+// (their opengraph-image files): they pass ownImage = true, because a picture named here would
+// replace theirs (tested; Next.js then uses the opengraph-image for og:image and twitter:image).
+const DEFAULT_IMAGE = {
+	url: "/og.png",
+	width: 1200,
+	height: 630,
+	alt: `${SITE_NAME}: US finance jobs from employers' own hiring pages`,
+};
+
+export function socialMetadata(
+	title: string,
+	description: string,
+	path: string,
+	{ page = 1, ownImage = false }: { page?: number; ownImage?: boolean } = {},
+): Pick<Metadata, "openGraph" | "twitter"> {
+	const images = ownImage ? {} : { images: [DEFAULT_IMAGE] };
+	return {
+		openGraph: {
+			type: "website",
+			siteName: SITE_NAME,
+			locale: "en_US",
+			title,
+			description,
+			url: canonicalUrl(path, page),
+			...images,
+		},
+		twitter: { card: "summary_large_image", title, description, ...images },
+	};
 }
 
 // " — Page 2" for page 2+, added to list-page titles.
