@@ -41,7 +41,7 @@ Open `.env.local` in your editor and replace the placeholder values:
 - **`PAYLOAD_SECRET`:** any long random text, e.g. the output of `openssl rand -hex 32`.
 - **`FANTASTIC_JOBS_KEY`:** leave it empty unless you need to fetch new jobs from the API
   (then ask the project owner for it privately).
-- Keep `MIN_JOBS_PER_PAGE=1` and `SITE_URL=http://localhost:3000`.
+- Keep `MIN_JOBS_PER_PAGE=3` (same as the live site) and `SITE_URL=http://localhost:3000`.
 
 `.env.local` is git-ignored: never commit it, and never put real secrets anywhere else.
 Choose the passwords **before** step 5: the database is created with them the first time.

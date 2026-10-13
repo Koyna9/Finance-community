@@ -72,8 +72,32 @@ starts, but its pages fail with an error (it is needed for canonical links and t
 6. **Sync job** (schedule `0 2 * * *` UTC). For the **first** run only, add `SYNC_TIME_FRAME=7d` and
    `EXPIRED_TIME_FRAME=1m` (closes dev jobs that closed since; 1 request credit), then remove both.
 7. **Day 7, real domain:** point the domain at the Service, set `SITE_URL` to it and
-   `ALLOW_INDEXING=true`, restart the Service, check `/robots.txt` lists the sitemap, then Google
-   Search Console + submit `SITE_URL/sitemap.xml`.
+   `ALLOW_INDEXING=true`, restart the Service, THEN the CloudFront invalidation `/*` (not before:
+   CloudFront would re-cache pages with noindex and the old canonicals). Then from a laptop:
+   `npm run check-live -- https://<domain>` must end with "All checks passed" (read-only; it checks
+   robots.txt + sitemap line, no noindex header, every sitemap URL and sample canonicals on the
+   domain, JobPosting on job pages). Then Google Search Console + submit `SITE_URL/sitemap.xml`.
+   Before launch, `npm run check-live -- https://<temporary address> --staging` checks the blocked setup.
+
+## 3b. Updating the live site (every new version)
+
+Restarting the Site Service never changes the database. Database changes (migrations) run only in
+the **Release job**, and it must run BEFORE the new site code starts.
+
+1. **Build the new image.**
+2. If the new version adds a migration (a new file in `migrations/`): set the **Release job** to the
+   new image and **run it first**. It adds the new columns, then `load-jobs` fills them in on existing
+   jobs from the saved files in the image: 0 API credits, nothing re-created, admin edits kept. Its log
+   ends with `Created: 0. Already there: N (newer fields filled in: N). …`, `Company names cleaned up: N.`
+   and `Open jobs in Payload: …`.
+   The running site keeps working meanwhile (the old code ignores the new columns; tested).
+3. **Then** set the **Site Service** and the **Sync job** to the new image (the Service restarts).
+4. Without a new migration, steps 1 and 3 are enough (running the Release job anyway does no harm).
+
+Migration `20261012_212424_job_type_website_stated_pay` (SEO fixes, 2026-10-13) adds the job's
+employment type, company website and pay as stated (per hour/month/year). Jobs the live sync added
+after the database import have no saved file in the image, so these fields stay empty for them; such
+jobs show exactly as before.
 
 ## 4. Check the 02:00 UTC sync run (next morning)
 

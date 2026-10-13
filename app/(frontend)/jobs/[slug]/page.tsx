@@ -10,9 +10,11 @@ import JsonLd from "@/components/JsonLd";
 import { MIN_PAY_LISTINGS as MIN_SALARY_LISTINGS } from "@/components/PayStrip";
 import SidebarBox, { PillLinks, type SidebarLink } from "@/components/SidebarBox";
 import {
+	countsInPayFigures,
 	getCategoryPlaceCounts,
 	getJobBySlug,
 	getPayStats,
+	getTitleSalaries,
 	getSimilarJobs,
 	minJobsPerPage,
 	payMidpoint,
@@ -21,16 +23,17 @@ import {
 } from "@/lib/db";
 import {
 	categoryInfo,
+	employmentTypeLabel,
+	jobPayFull,
 	levelLabel,
 	paragraphs,
-	payFull,
 	placeLabel,
 	sentences,
 	shortUsd,
 	timeAgoLong,
 	workStyleLabel,
 } from "@/lib/format";
-import { canonicalUrl, jobDescription, jobPostingJsonLd, jobTitle } from "@/lib/seo";
+import { canonicalUrl, jobDescription, jobPostingJsonLd, jobTitle, socialMetadata } from "@/lib/seo";
 
 // SEO rule 7: each job page is rendered on its first visit, then served from Next.js's page cache
 // and refreshed at most every 15 minutes (nothing is rendered at build time: no database needed
@@ -53,6 +56,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 		title: jobTitle(job),
 		description: jobDescription(job),
 		alternates: { canonical: canonicalUrl(`/jobs/${job.slug}`) },
+		...socialMetadata(jobTitle(job), jobDescription(job), `/jobs/${job.slug}`, { ownImage: true }),
 		// Closed jobs stay visible but are not indexed (SEO rule 5).
 		...(job.status === "open" ? {} : { robots: { index: false, follow: true } }),
 	};
@@ -67,13 +71,16 @@ export default async function JobPage({ params }: Props) {
 	const open = job.status === "open";
 	const cat = categoryInfo(job.category);
 	const roleLabel = cat?.shortLabel ?? "Finance";
-	const [min, placeCounts, similar, payStats, usPay] = await Promise.all([
+	const [min, placeCounts, similar, payStats, usPay, titleSalaries] = await Promise.all([
 		minJobsPerPage(),
 		getCategoryPlaceCounts(job.category, job.state_slug, job.city_slug),
 		getSimilarJobs(job, open ? SIMILAR_OPEN : SIMILAR_CLOSED),
 		job.state_slug ? getPayStats({ category: job.category, stateSlug: job.state_slug }) : null,
 		getPayStats({ category: job.category }), // does /salaries/<category> exist?
+		getTitleSalaries(MIN_SALARY_LISTINGS), // does /salaries/titles/<title> exist?
 	]);
+	const titleSalaryPath =
+		job.title_slug && titleSalaries.some((t) => t.key === job.title_slug) ? `/salaries/titles/${job.title_slug}` : null;
 
 	// Category place pages that pass the thin-page rule (never link to a 404).
 	const catPath = cat?.path ?? "/finance-jobs";
@@ -91,8 +98,9 @@ export default async function JobPage({ params }: Props) {
 	// The role's salary page exists only when 5+ US jobs in the role state pay.
 	const rolePay = cat && usPay && usPay.withPay >= MIN_SALARY_LISTINGS ? usPay : null;
 
-	const pay = payFull(job.pay_min, job.pay_max);
+	const pay = jobPayFull(job); // as the employer states it: per year, per hour, ...
 	const workStyle = workStyleLabel(job.work_arrangement);
+	const employment = employmentTypeLabel(job.employment_type); // also in JobPosting (employmentType)
 	const posted = timeAgoLong(job.date_posted);
 	const requirements = sentences(job.requirements);
 	const description = paragraphs(job.description);
@@ -126,6 +134,7 @@ export default async function JobPage({ params }: Props) {
 										{placeLabel(job)}
 									</Chip>
 									{workStyle && <Chip large>{workStyle}</Chip>}
+									{employment && <Chip large>{employment}</Chip>}
 									<Chip large>{levelLabel(job.level, true)}</Chip>
 									{cat && <Chip large>{cat.label}</Chip>}
 									{posted && <span className="px-1 py-1.5 text-sm text-muted">Posted {posted}</span>}
@@ -245,8 +254,11 @@ export default async function JobPage({ params }: Props) {
 					{/* Same look as SidebarBox, plus the home page's "$" coin in the heading */}
 					{cat && rolePay && (
 						<section aria-labelledby="role-pay" className="group/pay rounded-[10px] border border-border bg-surface p-5">
-							<h2 id="role-pay" className="mb-3 flex items-center gap-2 text-[17px] font-bold">
-								Compare {roleLabel} salaries
+							{/* The coin sits next to the heading, not inside it, so the heading text stays clean */}
+							<div className="mb-3 flex items-center gap-2">
+								<h2 id="role-pay" className="text-[17px] font-bold">
+									Compare {roleLabel} salaries
+								</h2>
 								{/* "$" coin: pops in while the box is hovered (or its link focused) and keeps turning left to right */}
 								<span
 									aria-hidden="true"
@@ -256,17 +268,22 @@ export default async function JobPage({ params }: Props) {
 										$
 									</span>
 								</span>
-							</h2>
+							</div>
 							<div className="flex flex-col gap-0.5">
 								<span className="text-[13px] text-muted">US median pay</span>
 								<span className="font-mono text-[22px] font-semibold text-accent-text">{shortUsd(rolePay.median)}</span>
 							</div>
 							<p className="mt-2 text-sm leading-normal text-text-2">
-								Yearly, from {rolePay.withPay} open {roleLabel} listings that state pay.
+								Yearly, from {rolePay.withPay} open full-time {roleLabel} listings that state pay.
 							</p>
 							<Link href={`/salaries/${cat.key}`} className="mt-3 inline-block text-sm font-semibold text-accent-text">
 								See {roleLabel} salaries by state →
 							</Link>
+							{titleSalaryPath && (
+								<Link href={titleSalaryPath} className="mt-2 block text-sm font-semibold text-accent-text">
+									See {job.clean_title} salary →
+								</Link>
+							)}
 						</section>
 					)}
 
@@ -302,15 +319,15 @@ function possessive(company: string | null): string {
 	return /s$/i.test(company) ? `${company}'` : `${company}'s`;
 }
 
-// Pay box on the right of the top band (open jobs only).
-function PayBox({ job, pay }: { job: Job; pay: string | null }) {
+// Pay box on the right of the top band (open jobs only). Pay in the unit the employer states it.
+function PayBox({ job, pay }: { job: Job; pay: { amount: string; per: string } | null }) {
 	return (
 		<div className="flex min-w-0 flex-[1_1_300px] flex-col gap-3 rounded-xl border border-border bg-surface-2 p-5">
 			{pay ? (
 				<div className="flex flex-col gap-1">
 					<span className="text-[13px] text-muted">Pay stated by employer</span>
-					<span className="font-mono text-[22px] font-semibold text-accent-text sm:text-[24px]">{pay}</span>
-					<span className="text-[13px] text-muted">per year</span>
+					<span className="font-mono text-[22px] font-semibold text-accent-text sm:text-[24px]">{pay.amount}</span>
+					<span className="text-[13px] text-muted">{pay.per}</span>
 				</div>
 			) : (
 				<span className="font-mono text-lg font-semibold text-muted">Pay not stated</span>
@@ -323,9 +340,10 @@ function PayBox({ job, pay }: { job: Job; pay: string | null }) {
 	);
 }
 
-// "<Role> pay in <State>": low / median / high + how this job compares.
+// "<Role> pay in <State>": low / median / high + how this job compares (only when this job's pay
+// is itself comparable: not part-time, contract, temporary or an internship).
 function PayBenchmark({ job, stats, roleLabel, state }: { job: Job; stats: PayStats; roleLabel: string; state: string }) {
-	const mid = payMidpoint(job.pay_min, job.pay_max);
+	const mid = countsInPayFigures(job) ? payMidpoint(job.pay_min, job.pay_max) : null;
 	let compare = "";
 	if (mid) {
 		const diff = (mid - stats.median) / stats.median;
@@ -349,7 +367,7 @@ function PayBenchmark({ job, stats, roleLabel, state }: { job: Job; stats: PaySt
 				))}
 			</div>
 			<p className="mt-3 text-sm leading-normal text-text-2">
-				{compare}Based on {stats.withPay} listings that state pay.
+				{compare}Based on {stats.withPay} full-time listings that state pay.
 			</p>
 		</SidebarBox>
 	);

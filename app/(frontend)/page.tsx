@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import JobCard from "@/components/JobCard";
+import JsonLd from "@/components/JsonLd";
 import SidebarBox, { LinkList } from "@/components/SidebarBox";
 import {
 	getCategoryCounts,
@@ -13,7 +14,7 @@ import {
 	minJobsPerPage,
 } from "@/lib/db";
 import { CATEGORY_LIST, LEVELS, levelLabel, levelPath } from "@/lib/format";
-import { canonicalUrl, homeDescription, homeTitle } from "@/lib/seo";
+import { canonicalUrl, homeDescription, homeJsonLd, homeTitle, socialMetadata } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -31,10 +32,12 @@ const QUICK_LINKS = [
 // Headline, subline and meta description can be edited in /admin (Site Text); empty = the text below.
 export async function generateMetadata(): Promise<Metadata> {
 	const [stats, siteText] = await Promise.all([getSiteStats(), getSiteText()]);
+	const description = siteText.defaultSeoDescription ?? homeDescription(stats.open);
 	return {
 		title: { absolute: homeTitle() },
-		description: siteText.defaultSeoDescription ?? homeDescription(stats.open),
+		description,
 		alternates: { canonical: canonicalUrl("/") },
+		...socialMetadata(homeTitle(), description, "/"),
 	};
 }
 
@@ -185,6 +188,7 @@ export default async function Home() {
 
 	return (
 		<>
+			<JsonLd data={homeJsonLd()} />
 			{/* 1. Navy hero */}
 			<section className="relative overflow-hidden bg-ink text-white">
 				{/* Decorative: the logo mark's three bars, large, on wide screens */}
@@ -345,8 +349,11 @@ export default async function Home() {
 							/>
 						</SidebarBox>
 						<section aria-labelledby="pay" className="group/pay flex flex-col gap-2 rounded-[10px] bg-accent-tint p-5">
-							<h2 id="pay" className="flex items-center gap-2 text-lg font-bold">
-								What finance roles pay
+							{/* The coin sits next to the heading, not inside it, so the heading text stays "What finance roles pay" */}
+							<div className="flex items-center gap-2">
+								<h2 id="pay" className="text-lg font-bold">
+									What finance roles pay
+								</h2>
 								{/* "$" coin: pops in while the box is hovered (or its link focused) and keeps turning left to right */}
 								<span
 									aria-hidden="true"
@@ -356,7 +363,7 @@ export default async function Home() {
 										$
 									</span>
 								</span>
-							</h2>
+							</div>
 							<p className="text-[15px] leading-normal text-accent-tint-text">
 								Pay ranges by role and state, built only from listings where the employer states pay.
 							</p>

@@ -8,6 +8,10 @@ const nextConfig: NextConfig = {
 	// visitor including Googlebot. By default Next.js streams them into <body> for most user agents,
 	// and Google ignores a canonical link outside <head>.
 	htmlLimitedBots: /.*/,
+	// Cached pages (job + salary pages, revalidate 900) send "s-maxage=900, stale-while-revalidate=900":
+	// a CDN (CloudFront) may serve an old copy for at most 30 minutes in total. Next.js's default is
+	// one year of stale-while-revalidate, which kept outdated copies (e.g. old canonicals) on the CDN.
+	expireTime: 1800,
 	// /jobs has no page of its own (CLAUDE.md section 9).
 	async redirects() {
 		return [{ source: "/jobs", destination: "/finance-jobs", permanent: true }];

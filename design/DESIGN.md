@@ -72,15 +72,17 @@ Link colour `#0B2545`; on hover `#1F7A5C` + underline. Visible focus ring on eve
 - **Chip** — 13px `text-2` on `chip`, radius 6, padding 5×9. Location chip has a small map-pin
   outline icon (inline SVG, `aria-hidden`).
 - **PayChip** — Plex Mono 13px/600. Stated pay: `accent-text` on `accent-tint`, short form
-  `$165K–$195K`. No pay: "Pay not stated" in `muted` on `chip`.
+  `$165K–$195K` (pay stated per hour/month: `$25–$32/hr`, `$300/mo`). No pay: "Pay not stated"
+  in `muted` on `chip`.
 - **JobCard** — white card, padding 18–20px, CompanyTile left; right side: company (14px/500
   `text-2`) with posted time right-aligned (13px `muted`, "2h ago"/"1d ago"); title as the link
   to the job page; on list pages only a one-line blurb (15px `text-2`, first sentence of
   `summary`, max ~160 chars); then chips: location, work style (list pages), level, role (home),
   PayChip. Variant prop: `compact` (home) vs `full` (list pages).
 - **PayStrip** (list pages) — bordered row of cells: Low · **Median** (cell on `accent-tint`,
-  value in `accent-text`) · High · a note "Yearly, from the X of Y listings that state pay" +
-  link to the category's salary page. Only shown when 5+ jobs on that page state pay.
+  value in `accent-text`) · High · a note "Yearly, from the X of Y listings that state full-time
+  pay" + link to the category's salary page. Only shown when 5+ jobs on that page state full-time
+  pay (part-time, contract, temporary and intern pay is left out; SEO audit 2026-10-12).
 - **SidebarBox** — white card, padding 20, H2 17–18px. Variants: link list with counts
   (rows divided by `border-soft`, count in Plex Mono `muted`), pill links, 2-column link grid.
 - **ApplyButton** — `ink` background, white 16px/600 text, radius 8, min-height 48px, outward
@@ -108,7 +110,8 @@ Finance Leadership "CFO, VP and head of finance".
 **List pages** — from `listing-fpa-texas.mockup.html` (built on Day 4, same components)
 White top band: breadcrumbs, H1 ("FP&A Jobs in Texas"), one-sentence intro with count and top
 cities, PayStrip. Then two columns: "N jobs · newest first" + full JobCards + pagination;
-sidebar: by-city (or by-state) links with counts (only pages passing the thin-page rule),
+sidebar: "At a glance" box first (by level, fully remote, posted in the last 7 days, top hiring
+companies; added 2026-10-13), then by-city (or by-state) links with counts (only pages passing the thin-page rule),
 "Other finance jobs in <place>" pill links, "<Role> jobs in other states" 2-column grid.
 
 **Job page (`/jobs/[slug]`)** — from `job.mockup.html`

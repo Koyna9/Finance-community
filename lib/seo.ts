@@ -1,10 +1,20 @@
 // Page titles and meta descriptions (CLAUDE.md section 9).
 // The root layout adds " — <SITE_NAME>" to every title (except the home page's absolute title).
 
+import type { Metadata } from "next";
 import type { Job, PayStats } from "@/lib/db";
-import { categoryInfo, joinAnd, paragraphs, payFull, placeLabel, shortUsd } from "@/lib/format";
+import {
+	categoryInfo,
+	jobPayForMarkup,
+	jobPayFull,
+	joinAnd,
+	paragraphs,
+	placeLabel,
+	shortUsd,
+	shownEmploymentTypes,
+} from "@/lib/format";
 import { stateCode } from "@/shared/states.js";
-import { SITE_NAME, siteUrl } from "@/lib/site";
+import { SITE_DESCRIPTION, SITE_NAME, siteUrl } from "@/lib/site";
 
 const DESCRIPTION_MAX = 160;
 
@@ -25,6 +35,40 @@ function countJobs(count: number, what: string): string {
 export function canonicalUrl(path: string, page = 1): string {
 	const clean = path.toLowerCase().replace(/\/+$/, "");
 	return `${siteUrl()}${clean}${page > 1 ? `?page=${page}` : ""}`;
+}
+
+// ---- Share previews (SEO audit 2026-10-12, 3.7) ------------------------------------------------
+
+// Open Graph + Twitter tags for LinkedIn, Slack, X, ...: the page's own title, description and
+// canonical URL, with the site-wide picture /og.png. Job and salary pages have their own picture
+// (their opengraph-image files): they pass ownImage = true, because a picture named here would
+// replace theirs (tested; Next.js then uses the opengraph-image for og:image and twitter:image).
+const DEFAULT_IMAGE = {
+	url: "/og.png",
+	width: 1200,
+	height: 630,
+	alt: `${SITE_NAME}: US finance jobs from employers' own hiring pages`,
+};
+
+export function socialMetadata(
+	title: string,
+	description: string,
+	path: string,
+	{ page = 1, ownImage = false }: { page?: number; ownImage?: boolean } = {},
+): Pick<Metadata, "openGraph" | "twitter"> {
+	const images = ownImage ? {} : { images: [DEFAULT_IMAGE] };
+	return {
+		openGraph: {
+			type: "website",
+			siteName: SITE_NAME,
+			locale: "en_US",
+			title,
+			description,
+			url: canonicalUrl(path, page),
+			...images,
+		},
+		twitter: { card: "summary_large_image", title, description, ...images },
+	};
 }
 
 // " — Page 2" for page 2+, added to list-page titles.
@@ -55,6 +99,20 @@ export function homeTitle(): string {
 	return `${SITE_NAME} — US Finance Jobs from Employers' Own Hiring Pages`;
 }
 
+// WebSite + Organization structured data for the home page (SEO audit 2026-10-12, 4.6): tells Google
+// the site's name and logo. No SearchAction: the site has no search box.
+export function homeJsonLd() {
+	const url = canonicalUrl("/");
+	const organization = { "@id": `${url}/#organization` };
+	return {
+		"@context": "https://schema.org",
+		"@graph": [
+			{ "@type": "WebSite", "@id": `${url}/#website`, name: SITE_NAME, url, description: SITE_DESCRIPTION, publisher: organization },
+			{ "@type": "Organization", ...organization, name: SITE_NAME, url, logo: `${url}/logo.png` },
+		],
+	};
+}
+
 export function homeDescription(openJobs: number): string {
 	return trimTo(
 		`Browse ${openJobs} open finance jobs at US companies: accounting, FP&A, tax, audit and more, ` +
@@ -64,18 +122,30 @@ export function homeDescription(openJobs: number): string {
 
 // ---- List pages (Day 4) ----------------------------------------------------------------------
 
-// "37 FP&A Jobs in Austin, TX" / "104 Finance Jobs in the US"
+// H1, keyword first (SEO audit 2026-10-12, 3.1): "FP&A Jobs in Austin, TX" / "Finance Jobs in the US".
 // what: "FP&A Jobs", "Finance Jobs", "Entry Level Finance Jobs"; place: "Austin, TX" or null (US).
-export function listTitle(count: number, what: string, place: string | null): string {
-	return `${countJobs(count, what)} ${place ? `in ${place}` : "in the US"}`;
+export function listTitle(what: string, place: string | null): string {
+	return `${what} ${place ? `in ${place}` : "in the US"}`;
 }
 
-// "Browse 37 open FP&A jobs in Austin, Texas from companies hiring now. Pay range $85K–$130K."
-// what: "FP&A jobs", "finance jobs"; placeLong: "Austin, Texas" or null (US).
-export function listDescription(count: number, what: string, placeLong: string | null, pay: PayStats | null): string {
+// <title> of a list page: the H1 plus the count, "FP&A Jobs in Austin, TX: 37 Open Roles".
+export function listMetaTitle(h1: string, count: number): string {
+	return `${h1}: ${count} Open ${count === 1 ? "Role" : "Roles"}`;
+}
+
+// "Browse 37 open FP&A jobs in Austin, Texas. Pay range $85K–$130K. Hiring now: Acme, Beta and Gamma."
+// what: "FP&A jobs", "finance jobs"; placeLong: "Austin, Texas" or null (US); employers: biggest first.
+export function listDescription(
+	count: number,
+	what: string,
+	placeLong: string | null,
+	pay: PayStats | null,
+	employers: string[] = [],
+): string {
 	const where = placeLong ? `in ${placeLong}` : "across the US";
 	const payText = pay && pay.withPay >= 5 ? ` Pay range ${shortUsd(pay.low)}–${shortUsd(pay.high)}.` : "";
-	return trimTo(`Browse ${count} open ${countJobs(count, what).replace(/^\d+ /, "")} ${where} from companies hiring now.${payText}`);
+	const hiring = employers.length ? ` Hiring now: ${joinAnd(employers.slice(0, 3))}.` : " From companies hiring now.";
+	return trimTo(`Browse ${count} open ${countJobs(count, what).replace(/^\d+ /, "")} ${where}.${payText}${hiring}`);
 }
 
 // Default intro under the H1 (when the admin has not written one):
@@ -89,9 +159,9 @@ export function listIntro(count: number, what: string, placeLong: string | null,
 
 // ---- Company pages ---------------------------------------------------------------------------
 
-// "5 Finance Jobs at Stripe"
-export function companyTitle(count: number, company: string): string {
-	return `${countJobs(count, "Finance Jobs")} at ${company}`;
+// H1, keyword first: "Finance Jobs at Stripe" (the <title> adds the count: listMetaTitle).
+export function companyTitle(company: string): string {
+	return `Finance Jobs at ${company}`;
 }
 
 // "Browse 5 open finance jobs at Stripe (Financial Services). Apply on Stripe's own careers site. Pay range …"
@@ -118,10 +188,10 @@ export function salaryTitle(what: string, pay: PayStats): string {
 	return `${what} Salaries in the US: Median ${shortUsd(pay.median)}`;
 }
 
-// "Yearly FP&A pay in the US from 9 listings that state pay: low $82K, median $101K, high $309K."
+// "Yearly FP&A pay in the US from 9 full-time listings that state pay: low $82K, median $101K, high $309K."
 export function salaryDescription(what: string, pay: PayStats, extra = ""): string {
 	return trimTo(
-		`Yearly ${what} pay in the US from ${pay.withPay} listings that state pay: low ${shortUsd(pay.low)}, ` +
+		`Yearly ${what} pay in the US from ${pay.withPay} full-time listings that state pay: low ${shortUsd(pay.low)}, ` +
 			`median ${shortUsd(pay.median)}, high ${shortUsd(pay.high)}.${extra}`,
 	);
 }
@@ -135,12 +205,13 @@ export function jobTitle(job: Job): string {
 }
 
 // "FP&A Manager at Ridgeway Semiconductors in Austin, TX. Pay $120,000–$140,000 a year. <summary>"
+// Pay as the employer states it ("Pay $25–$32 an hour.").
 export function jobDescription(job: Job): string {
 	const at = job.company ? ` at ${job.company}` : "";
-	const pay = payFull(job.pay_min, job.pay_max);
+	const pay = jobPayFull(job);
 	const parts = [
 		`${job.clean_title}${at} in ${placeLabel(job)}.`,
-		job.status === "open" ? (pay ? `Pay ${pay} a year.` : "") : "This role has closed.",
+		job.status === "open" ? (pay ? `Pay ${pay.amount} ${pay.a}.` : "") : "This role has closed.",
 		job.summary ?? `${categoryInfo(job.category)?.label ?? "Finance"} role. Apply on the employer's site.`,
 	];
 	return trimTo(parts.filter(Boolean).join(" "));
@@ -158,8 +229,9 @@ function isoUtc(value: string): string | null {
 	return Number.isNaN(d.getTime()) ? null : d.toISOString();
 }
 
-// Google for Jobs markup for an OPEN job, built only from data we have (fields we lack are left out:
-// no validThrough, no employmentType). Returns null for closed jobs or jobs without a description.
+// Google for Jobs markup for an OPEN job, built only from data we have (fields we lack are left out,
+// e.g. no validThrough: we don't know a real end date). employmentType and hiringOrganization.sameAs
+// only when known. Returns null for closed jobs or jobs without a description.
 export function jobPostingJsonLd(job: Job): Record<string, unknown> | null {
 	if (job.status !== "open") return null;
 	// Description text with its line breaks as HTML paragraphs (falls back to the summary).
@@ -176,10 +248,14 @@ export function jobPostingJsonLd(job: Job): Record<string, unknown> | null {
 	};
 	const posted = job.date_posted ? isoUtc(job.date_posted) : null;
 	if (posted) data.datePosted = posted;
+	// The same types the job page shows as a chip ("OTHER" left out).
+	const types = shownEmploymentTypes(job.employment_type);
+	if (types.length) data.employmentType = types.length === 1 ? types[0] : types;
 	if (job.company) {
 		data.hiringOrganization = {
 			"@type": "Organization",
 			name: job.company,
+			...(job.company_website ? { sameAs: job.company_website } : {}),
 			...(job.logo ? { logo: job.logo } : {}),
 		};
 	}
@@ -198,13 +274,15 @@ export function jobPostingJsonLd(job: Job): Record<string, unknown> | null {
 		data.jobLocationType = "TELECOMMUTE";
 		data.applicantLocationRequirements = { "@type": "Country", name: "US" };
 	}
-	if (job.pay_min || job.pay_max) {
-		const value: Record<string, unknown> = { "@type": "QuantitativeValue", unitText: "YEAR" };
-		if (job.pay_min && job.pay_max && job.pay_min !== job.pay_max) {
-			value.minValue = job.pay_min;
-			value.maxValue = job.pay_max;
+	// Pay in the unit the employer states it (HOUR, MONTH, ... or YEAR), as on the page.
+	const pay = jobPayForMarkup(job);
+	if (pay) {
+		const value: Record<string, unknown> = { "@type": "QuantitativeValue", unitText: pay.unitText };
+		if (pay.min && pay.max && pay.min !== pay.max) {
+			value.minValue = pay.min;
+			value.maxValue = pay.max;
 		} else {
-			value.value = job.pay_min || job.pay_max;
+			value.value = pay.min || pay.max;
 		}
 		data.baseSalary = { "@type": "MonetaryAmount", currency: "USD", value };
 	}

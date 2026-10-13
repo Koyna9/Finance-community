@@ -153,6 +153,10 @@ export interface Job {
   logo?: string | null;
   companyIndustry?: string | null;
   companySize?: string | null;
+  /**
+   * Company's own website (from LinkedIn); JobPosting sameAs
+   */
+  companyWebsite?: string | null;
   category: 'leadership' | 'tax' | 'audit' | 'treasury' | 'risk-compliance' | 'investment' | 'fpa' | 'accounting';
   level: 'entry' | 'mid' | 'senior' | 'lead';
   state?: string | null;
@@ -165,13 +169,29 @@ export interface Job {
    */
   workArrangement?: string | null;
   /**
-   * Yearly USD
+   * From the employer's listing. Pay of part-time, contract, temporary and intern jobs is left out of salary figures
+   */
+  employmentType?: ('FULL_TIME' | 'PART_TIME' | 'CONTRACTOR' | 'TEMPORARY' | 'INTERN' | 'OTHER')[] | null;
+  /**
+   * Yearly USD (used for salary figures)
    */
   payMin?: number | null;
   /**
-   * Yearly USD
+   * Yearly USD (used for salary figures)
    */
   payMax?: number | null;
+  /**
+   * How the employer states pay. Empty = per year
+   */
+  payUnit?: ('HOUR' | 'DAY' | 'WEEK' | 'MONTH' | 'YEAR') | null;
+  /**
+   * Pay as stated, per pay unit (USD)
+   */
+  payStatedMin?: number | null;
+  /**
+   * Pay as stated, per pay unit (USD)
+   */
+  payStatedMax?: number | null;
   summary?: string | null;
   requirements?: string | null;
   description?: string | null;
@@ -343,6 +363,7 @@ export interface JobsSelect<T extends boolean = true> {
   logo?: T;
   companyIndustry?: T;
   companySize?: T;
+  companyWebsite?: T;
   category?: T;
   level?: T;
   state?: T;
@@ -351,8 +372,12 @@ export interface JobsSelect<T extends boolean = true> {
   citySlug?: T;
   isRemote?: T;
   workArrangement?: T;
+  employmentType?: T;
   payMin?: T;
   payMax?: T;
+  payUnit?: T;
+  payStatedMin?: T;
+  payStatedMax?: T;
   summary?: T;
   requirements?: T;
   description?: T;

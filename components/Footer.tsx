@@ -14,7 +14,7 @@ function Column({ title, children }: { title: string; children: React.ReactNode 
 	);
 }
 
-// White footer: name + one-line description, then Roles / Top states / Explore link columns.
+// White footer: name + one-line description, then Roles / Top states / Explore / About link columns.
 export default async function Footer() {
 	const states = await getTopStates(TOP_STATES);
 	return (
@@ -47,6 +47,10 @@ export default async function Footer() {
 						<Link href="/companies">Companies</Link>
 						<Link href="/salaries">Salaries</Link>
 						<Link href="/finance-jobs/remote">Remote jobs</Link>
+					</Column>
+					<Column title="About">
+						<Link href="/about">About us</Link>
+						<Link href="/how-we-source-jobs">How we source jobs</Link>
 					</Column>
 				</div>
 			</div>

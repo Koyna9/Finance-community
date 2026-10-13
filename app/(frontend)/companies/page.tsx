@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import AzIndex from "@/components/AzIndex";
 import { getGroupCounts } from "@/lib/db";
-import { canonicalUrl } from "@/lib/seo";
+import { canonicalUrl, socialMetadata } from "@/lib/seo";
 
 // A–Z list of companies with open jobs (CLAUDE.md section 9).
 export const dynamic = "force-dynamic";
@@ -9,12 +9,10 @@ export const dynamic = "force-dynamic";
 const PATH = "/companies";
 
 export async function generateMetadata(): Promise<Metadata> {
-	return {
-		title: "Companies Hiring for Finance Roles A–Z",
-		description:
-			"US companies with open finance jobs right now, A–Z, with the number of open roles at each. Apply on each company's own site.",
-		alternates: { canonical: canonicalUrl(PATH) },
-	};
+	const title = "Companies Hiring for Finance Roles A–Z";
+	const description =
+		"US companies with open finance jobs right now, A–Z, with the number of open roles at each. Apply on each company's own site.";
+	return { title, description, alternates: { canonical: canonicalUrl(PATH) }, ...socialMetadata(title, description, PATH) };
 }
 
 export default async function CompaniesPage() {

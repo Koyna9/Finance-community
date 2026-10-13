@@ -1,6 +1,6 @@
 // Tiny check of shared/rules.js: run `node scripts/test-rules.mjs`.
 
-import { toRow, cleanTitle, levelFor, slugify } from "../shared/rules.js";
+import { toRow, cleanTitle, cleanCompany, levelFor, slugify, companyWebsite, employmentTypes, statedPay } from "../shared/rules.js";
 
 const base = {
   countries_derived: ["United States"],
@@ -63,6 +63,29 @@ const checks = [
   [levelFor("Finance Business Partner"), "mid"],
   [levelFor("Senior Finance Business Partner"), "senior"],
   [levelFor("Partner, Audit"), "lead"],
+  // Company names (SEO audit 2026-10-12, 3.5).
+  [cleanCompany("Jackson Hewitt - 1558"), "Jackson Hewitt"],
+  [cleanCompany("Kirby-Smith Machinery, Inc. - Oklahoma City, OK"), "Kirby-Smith Machinery, Inc."],
+  [cleanCompany("The Learning Experiene -  Huntington Beach, CA"), "The Learning Experiene"],
+  [cleanCompany("DGI - Menard INC"), "DGI - Menard INC"],
+  [cleanCompany("PMM - America's Technology Molder"), "PMM - America's Technology Molder"],
+  [cleanCompany("ServiceMaster Restore 10188 - Doral"), "ServiceMaster Restore 10188 - Doral"],
+  [cleanCompany("Stanley 1913"), "Stanley 1913"],
+  [cleanCompany("Acme - Springfield, XX"), "Acme - Springfield, XX"],
+  [cleanCompany("No relevant LinkedIn company found."), null],
+  // Company website, employment type, stated pay (SEO audit 2026-10-12).
+  [companyWebsite({ org_linkedin_website: "http://https://ronaldmcdonaldhouseoregon.org" }), "https://ronaldmcdonaldhouseoregon.org/"],
+  [companyWebsite({ org_linkedin_website: "www.crescolabs.com" }), "https://www.crescolabs.com/"],
+  [companyWebsite({ org_linkedin_website: "not a site" }), null],
+  [companyWebsite({}), null],
+  [employmentTypes({ ai_employment_type: ["INTERN", "FULL_TIME", "INTERN", "VOLUNTEER"] }).join(","), "INTERN,FULL_TIME"],
+  [employmentTypes({}).join(","), ""],
+  [JSON.stringify(statedPay({ ai_salary_currency: "USD", ai_salary_unit_text: "HOUR", ai_salary_min_value: 21.63, ai_salary_max_value: 26.92 })),
+    '{"pay_unit":"HOUR","pay_stated_min":21.63,"pay_stated_max":26.92}'],
+  [JSON.stringify(statedPay({ ai_salary_currency: "USD", ai_salary_unit_text: "MONTH", ai_salary_value: 300 })),
+    '{"pay_unit":"MONTH","pay_stated_min":300,"pay_stated_max":300}'],
+  [JSON.stringify(statedPay({ ai_salary_currency: "EUR", ai_salary_unit_text: "YEAR", ai_salary_value: 50000 })),
+    '{"pay_unit":null,"pay_stated_min":null,"pay_stated_max":null}'],
 ];
 for (const [got, want] of checks) {
   console.log(`  ${got === want ? "OK  " : "FAIL"} ${JSON.stringify(got)}${got === want ? "" : ` (wanted ${JSON.stringify(want)})`}`);

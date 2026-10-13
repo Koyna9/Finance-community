@@ -7,7 +7,7 @@ import { after } from "next/server";
 
 // Route patterns as Next.js labels the cached pages: the folder path INCLUDING the route group
 // "(frontend)". "/jobs/[slug]" would match nothing and refresh nothing.
-const CACHED_PAGES = ["/(frontend)/jobs/[slug]", "/(frontend)/salaries/[category]"];
+const CACHED_PAGES = ["/(frontend)/jobs/[slug]", "/(frontend)/salaries/[category]", "/(frontend)/salaries/titles/[title]"];
 
 function revalidateAll(): void {
 	for (const path of CACHED_PAGES) revalidatePath(path, "page");

@@ -1,7 +1,7 @@
 // Sorting rules (CLAUDE.md section 8). Used by scripts/backfill.mjs AND the sync worker.
 // toRow(apiJob) turns one fantastic.jobs job into one `jobs` row, or returns null to skip it.
 
-import { normalizeState } from "./states.js";
+import { normalizeState, STATE_CODES } from "./states.js";
 
 // ---- Values to confirm against real data (Day 2) -------------------------------------------
 
@@ -116,6 +116,63 @@ export function yearlyPay(job) {
   return { pay_min: min, pay_max: max };
 }
 
+// Pay as the employer states it (same figures as yearlyPay, before converting to yearly):
+// "$25–$32 an hour" stays per hour on the site and in JobPosting (SEO audit 2026-10-12, 4.5).
+export function statedPay(job) {
+  const none = { pay_unit: null, pay_stated_min: null, pay_stated_max: null };
+  if (job.ai_salary_currency !== "USD") return none;
+  const unit = String(job.ai_salary_unit_text ?? "").toUpperCase();
+  if (!PER_YEAR[unit]) return none;
+  const ok = (v) => (typeof v === "number" && v > 0 ? v : null);
+  let min = ok(job.ai_salary_min_value);
+  let max = ok(job.ai_salary_max_value);
+  if (min === null && max === null) min = max = ok(job.ai_salary_value);
+  if (min === null && max === null) return none;
+  return { pay_unit: unit, pay_stated_min: min, pay_stated_max: max };
+}
+
+// ---- Employment type and company website -----------------------------------------------------
+
+// Google for Jobs employmentType values (same as the API's ai_employment_type).
+export const EMPLOYMENT_TYPES = ["FULL_TIME", "PART_TIME", "CONTRACTOR", "TEMPORARY", "INTERN", "OTHER"];
+
+export function employmentTypes(job) {
+  const values = Array.isArray(job.ai_employment_type) ? job.ai_employment_type : [];
+  return [...new Set(values.map((v) => String(v).toUpperCase()).filter((v) => EMPLOYMENT_TYPES.includes(v)))];
+}
+
+// The company's own website (from its LinkedIn page), as a clean absolute URL, or null.
+// Fixes "http://https://example.org" and adds https:// to "www.example.com".
+export function companyWebsite(job) {
+  let text = String(job.org_linkedin_website ?? "").trim();
+  if (!text) return null;
+  text = text.replace(/^https?:\/\/(?=https?:\/\/)/i, "");
+  if (!/^https?:\/\//i.test(text)) text = `https://${text}`;
+  try {
+    const url = new URL(text);
+    if (!/^https?:$/.test(url.protocol) || !/\.[a-z]{2,}$/i.test(url.hostname) || /linkedin\.com$/i.test(url.hostname)) return null;
+    return url.href;
+  } catch {
+    return null;
+  }
+}
+
+// ---- Company name --------------------------------------------------------------------------
+
+const STATE_CODE_SET = new Set(Object.values(STATE_CODES));
+
+// Company names arrive with notes or branch details glued on (SEO audit 2026-10-12, 3.5):
+//   "No relevant LinkedIn company found.PIPESTONE"       -> "PIPESTONE"
+//   "Jackson Hewitt - 1558" (franchise/store number)     -> "Jackson Hewitt"
+//   "Kirby-Smith Machinery, Inc. - Oklahoma City, OK"    -> "Kirby-Smith Machinery, Inc."
+// Real names with a dash stay ("DGI - Menard INC", "ServiceMaster Restore 10188 - Doral").
+export function cleanCompany(name) {
+  let n = String(name ?? "").replace(/no relevant linkedin company found\.?/gi, "").replace(/\s+/g, " ").trim();
+  n = n.replace(/ - \d+$/, "");
+  n = n.replace(/ - [A-Za-z][A-Za-z .'-]*, ([A-Z]{2})$/, (match, code) => (STATE_CODE_SET.has(code) ? "" : match));
+  return n.trim() || null;
+}
+
 // ---- Slugs ---------------------------------------------------------------------------------
 
 export function slugify(text) {
@@ -157,6 +214,11 @@ export function toJobData(row) {
     workArrangement: row.work_arrangement,
     payMin: row.pay_min,
     payMax: row.pay_max,
+    payUnit: row.pay_unit,
+    payStatedMin: row.pay_stated_min,
+    payStatedMax: row.pay_stated_max,
+    employmentType: row.employment_type,
+    companyWebsite: row.company_website,
     summary: row.summary,
     requirements: row.requirements,
     description: row.description,
@@ -184,8 +246,8 @@ export function toRow(job) {
 
   const clean_title = cleanTitle(title);
   const title_slug = slugify(clean_title);
-  // Some company names arrive with a data note glued on: "No relevant LinkedIn company found.PIPESTONE".
-  const company = String(job.organization ?? "").replace(/no relevant linkedin company found\.?/gi, "").trim() || null;
+  // Notes, franchise numbers and branch locations glued to the name are removed (cleanCompany).
+  const company = cleanCompany(job.organization);
   const company_slug = company ? slugify(company) : null;
   const state_slug = state ? slugify(state) : null;
   const city_slug = city ? slugify(city) : null;
@@ -205,6 +267,7 @@ export function toRow(job) {
     logo: job.org_logo_permalink ?? null,
     company_industry: job.org_linkedin_industry ?? null,
     company_size: job.org_linkedin_size ?? null,
+    company_website: companyWebsite(job),
     category,
     level: levelFor(title, job.ai_experience_level),
     state,
@@ -214,6 +277,8 @@ export function toRow(job) {
     is_remote,
     work_arrangement: job.ai_work_arrangement ?? null,
     ...yearlyPay(job),
+    ...statedPay(job),
+    employment_type: employmentTypes(job),
     summary: job.ai_core_responsibilities ?? null,
     requirements: job.ai_requirements_summary ?? null,
     description: job.description_text ?? null,

@@ -57,7 +57,7 @@ Days 1–3 were built on Cloudflare D1 locally; Day 4A switches them over.
 | Cache | **Redis** (shared cache for page data, `lib/cache.ts`, cache-aside, 15 minutes per item, keys under `fc:`). Locally: `redis:7.2-alpine` in `docker-compose.yml`, port 6379, password required. Online: a **managed Redis on the same cloud as TrueFoundry** (probably AWS ElastiCache or GCP Memorystore): Redis OSS 7.x or Valkey 7.2/8, one primary, cluster mode disabled (not ElastiCache Serverless), smallest node (well under 100 MB needed), `maxmemory-policy volatile-lru`, no persistence/backups, TLS on, password on, private network only (reachable only from the TrueFoundry cluster) |
 | Nightly job | Node script `jobs/sync.ts`, run locally with `npm run sync`; online as a **TrueFoundry Job with a schedule trigger** `0 2 * * *` (timezone UTC) |
 | Hosting (from Day 6) | **TrueFoundry**: one Service (the Next.js + Payload app, from a Docker image) + one scheduled Job (same image, runs the sync command) |
-| Settings + secrets | `.env.local` locally (`DATABASE_URL`, `PAYLOAD_SECRET`, `FANTASTIC_JOBS_KEY`, `MIN_JOBS_PER_PAGE=1`, `SITE_URL=http://localhost:3000`, `REDIS_PASSWORD`, `REDIS_URL`); TrueFoundry secrets / environment variables online (`MIN_JOBS_PER_PAGE=3`, `SITE_URL` = the live domain, `REDIS_URL=rediss://:<password>@<host>:<port>` and, if the cloud's TLS needs it (GCP), `REDIS_CA_CERT` = its CA certificate; both for the site Service AND the sync Job; database SSL on AWS RDS: `?sslmode=require` at the end of `DATABASE_URL` for every workload, see `lib/database-pool.ts` and DEPLOY.md 2a) |
+| Settings + secrets | `.env.local` locally (`DATABASE_URL`, `PAYLOAD_SECRET`, `FANTASTIC_JOBS_KEY`, `MIN_JOBS_PER_PAGE=3`, `SITE_URL=http://localhost:3000`, `REDIS_PASSWORD`, `REDIS_URL`); TrueFoundry secrets / environment variables online (`MIN_JOBS_PER_PAGE=3`, `SITE_URL` = the live domain, `REDIS_URL=rediss://:<password>@<host>:<port>` and, if the cloud's TLS needs it (GCP), `REDIS_CA_CERT` = its CA certificate; both for the site Service AND the sync Job; database SSL on AWS RDS: `?sslmode=require` at the end of `DATABASE_URL` for every workload, see `lib/database-pool.ts` and DEPLOY.md 2a) |
 | Domain | Company domain/DNS pointed at the TrueFoundry service (Day 7) |
 | Local tools | Node 24, OrbStack (Docker 29, Compose 5) |
 
@@ -102,7 +102,7 @@ finance-jobs/
   CLAUDE.md, DAY_PROMPTS.md
   docker-compose.yml        local PostgreSQL 17 (service "postgres", named volume postgres-data)
                             + local Redis 7.2 cache (service "redis", no volume)
-  .env.local                DATABASE_URL, PAYLOAD_SECRET, FANTASTIC_JOBS_KEY, MIN_JOBS_PER_PAGE=1,
+  .env.local                DATABASE_URL, PAYLOAD_SECRET, FANTASTIC_JOBS_KEY, MIN_JOBS_PER_PAGE=3,
                             REDIS_PASSWORD, REDIS_URL (git-ignored)
   .env.example              every setting name with placeholder values (committed; copy to .env.local)
   Dockerfile                builds the app image for TrueFoundry (Day 6)
@@ -122,8 +122,10 @@ finance-jobs/
   scripts/fantastic.mjs     API helper: reads the key from .env.local, shared filters (title_advanced)
   scripts/check-credits.mjs the Day 2 one-job credit check
   scripts/test-rules.mjs    tiny test of rules.js on fake jobs
+  scripts/check-live.mjs    `npm run check-live -- <url> [--staging]`: read-only launch check (domain in
+                            canonicals + sitemap, robots.txt, noindex header, JobPosting)
   scripts/backfill.mjs      fetches jobs (capped) and saves raw files: --test (5), dev (BACKFILL_MAX), --fresh
-  scripts/load-jobs.ts      saved raw files (incl. data/sync/*-active-*.json) -> toRow -> Payload Jobs (create new by sourceId; no API calls)
+  scripts/load-jobs.ts      saved raw files (incl. data/sync/*-active-*.json) -> toRow -> Payload Jobs (create new by sourceId; fill newer empty fields on existing jobs; clean company names; no API calls)
                             (replaces scripts/make-seed.mjs)
   jobs/sync.ts              nightly sync (section 10); `npm run sync`
   design/DESIGN.md          approved UI design (section 11) + design/mockups/ (reference only)
@@ -135,10 +137,14 @@ finance-jobs/
   lib/cache.ts              Redis cache used only by lib/db.ts reads (`cached`) + `bumpCacheVersion`
                             for the Jobs/CategoryPages hooks and the end of sync.ts / load-jobs.ts
   lib/format.ts             pay (USD) / date / label helpers
-  lib/seo.ts                page title + meta description builders
+  lib/seo.ts                page title + meta description builders, share tags (socialMetadata)
+  lib/og.tsx                share-picture card (Open Graph images, 1200×630)
+  lib/sitemap.ts            sitemap index + parts (served by app/sitemap.xml/ and app/sitemaps/[file]/)
   components/               one file per DESIGN.md component: Header, Footer, Breadcrumbs,
                             CompanyTile, Chip, PayChip, JobCard, ApplyButton, SidebarBox, ...
   components/PlaceLinks.tsx "Browse by state" / "Browse by city" link lists
+  components/InfoPage.tsx   layout for text pages (/about, /how-we-source-jobs; later Privacy, Terms)
+  public/logo.png           512 px logo for the home page's Organization data (same art as favicon.svg)
   app/globals.css           design tokens (Tailwind theme)
   app/(frontend)/           the public site pages (section 9) + its root layout and not-found
   app/(payload)/            Payload's admin + API routes (created by Payload; don't edit by hand)
@@ -250,12 +256,15 @@ what SQL in `lib/db.ts` uses. Payload adds its own `id`, `createdAt`, `updatedAt
 | `title`, `cleanTitle`, `titleSlug` (indexed) | text | |
 | `company`, `companySlug` (indexed), `logo` | text | `logo` is the image URL |
 | `companyIndustry`, `companySize` | text | `org_linkedin_industry` / `org_linkedin_size` |
+| `companyWebsite` | text | `org_linkedin_website`, cleaned (JobPosting `sameAs`; added 2026-10-13) |
 | `category` | select (8 keys from section 8), indexed | admin can correct it |
 | `level` | select: entry / mid / senior / lead, indexed | admin can correct it |
 | `state`, `stateSlug` (indexed), `city`, `citySlug` (indexed) | text | |
 | `isRemote` | checkbox | |
 | `workArrangement` | text | On-site, Hybrid, Remote OK, Remote Solely |
-| `payMin`, `payMax` | number | yearly USD |
+| `employmentType` | select, many: FULL_TIME / PART_TIME / CONTRACTOR / TEMPORARY / INTERN / OTHER | `ai_employment_type` (Google's values); admin can correct it (added 2026-10-13) |
+| `payMin`, `payMax` | number | yearly USD (used for all salary figures) |
+| `payUnit`, `payStatedMin`, `payStatedMax` | select HOUR/DAY/WEEK/MONTH/YEAR + numbers | pay as the employer states it (shown on the site and in JobPosting; added 2026-10-13) |
 | `summary`, `requirements`, `description` | textarea | |
 | `applyUrl` | text | |
 | `datePosted` | date, indexed | |
@@ -334,10 +343,21 @@ articles/blogs and educational content; keep the setup simple so they can be add
    IT, BSA, AWM. "Sr. Financial Analyst - FP&A (Austin)" → "Financial Analyst";
    "FP&A Manager" → "FP&A Manager"; "Senior Manager, IT Audit" → "IT Audit Manager".
    **Company name:** strip the data note "No relevant LinkedIn company found." (it arrives glued
-   to some names: "No relevant LinkedIn company found.PIPESTONE" → "PIPESTONE").
+   to some names: "No relevant LinkedIn company found.PIPESTONE" → "PIPESTONE"). Also (`cleanCompany`,
+   2026-10-13, SEO audit 3.5) a trailing franchise/store number ("Jackson Hewitt - 1558" → "Jackson
+   Hewitt") or branch location " - City, ST" with a real state code, and double spaces. Real names with
+   a dash stay ("DGI - Menard INC"). `load-jobs` applies it to jobs already in the database too
+   (name + `companySlug`; job slugs never change).
 6. **Pay:** use `ai_salary_min_value`/`ai_salary_max_value` (fall back to `ai_salary_value`), only
    when currency is USD. Convert to yearly: YEAR×1, MONTH×12, WEEK×52, DAY×260, HOUR×2080. Round.
    No pay → NULL. Never estimate or invent pay.
+   Also keep the pay as stated (`payUnit`, `payStatedMin`, `payStatedMax`, not converted): job cards,
+   the job page and JobPosting show it per hour/month as the employer wrote it; the yearly figures
+   are used only for salary figures (low/median/high), which leave out part-time, contract,
+   temporary and intern jobs (SEO audit 2026-10-12, item 4.5).
+   **Employment type:** `employmentType` = `ai_employment_type`, keeping only Google's values.
+   **Company website:** `org_linkedin_website`, fixed ("http://https://…", missing "https://") or NULL.
+   `scripts/load-jobs.ts` fills these on existing jobs only while they are empty (0 API credits).
 7. **Slugs:** lowercase, drop apostrophes (`'` and `’`: "Children's" → `childrens`),
    `&`→`and`, non-alphanumerics→`-`, trimmed.
    Job slug = `<company-slug>-<title-slug>-<city-slug or state-slug>-<id>`.
@@ -363,7 +383,10 @@ articles/blogs and educational content; keep the setup simple so they can be add
 | Company | `/companies/[company]` | `/companies/stripe` |
 | Pay overview | `/salaries` | each category: low, median, high yearly USD, number of jobs with pay |
 | Pay for a category | `/salaries/[category]` | `/salaries/fpa` — US figure + table by state |
+| Pay for a job title | `/salaries/titles/[title]` | `/salaries/titles/staff-accountant` — US figure, by level (levels with 3+), the listings behind it. Only titles with 5+ full-time listings that state pay from 3+ different companies (`getTitleSalaries`; never one employer's pay sheet), else 404 + not linked + not in the sitemap. Linked from `/salaries`, the title's `/titles/` page and its job pages (added 2026-10-13, SEO audit section 5) |
 | Job | `/jobs/[slug]` | — |
+| About | `/about` | what the site is, how it differs (added 2026-10-13; who runs it + contact: when the company decides) |
+| How we source jobs | `/how-we-source-jobs` | where jobs come from, sorting, nightly closing, stated-pay rule (keep it true when those rules change) |
 | (redirect) | `/jobs` | permanent redirect to `/finance-jobs` |
 
 Routing (Next.js App Router, inside `app/(frontend)/`): one dynamic route `[listing]/page.tsx`
@@ -375,15 +398,22 @@ Level pages have no state/city sub-pages in week 1. Unknown slugs → 404.
 
 **Thin-page rule:** a state or city page (for "all finance" or a category) exists only if it has
 at least `MIN_JOBS_PER_PAGE` open jobs; otherwise return 404 and never link to it. Job title
-pages (and the `/titles` index) use the same minimum.
-`MIN_JOBS_PER_PAGE` is a setting, never a hard-coded number: **1 locally** (`.env.local`, so every
-page type can be built with only ~100 dev jobs) and **3 in production** (TrueFoundry environment variable).
+pages (and the `/titles` index) use the same minimum. Company pages exist with 1+ open job (their
+job pages link to them), but below `MIN_JOBS_PER_PAGE` they get `noindex, follow` and are left out
+of the sitemap (SEO audit 2026-10-12).
+`MIN_JOBS_PER_PAGE` is a setting, never a hard-coded number: **3 locally** (`.env.local`; was 1 while
+building with ~100 dev jobs, changed 2026-10-13 so localhost looks like the live site) and **3 in
+production** (TrueFoundry environment variable).
 Hidden jobs (`hidden = true`) never count toward any page, count or pay figure.
 
 **Every list page shows:**
-- An H1 and `<title>` with the count and place, e.g. "37 FP&A Jobs in Austin, TX" and
-  meta description like "Browse 37 open FP&A jobs in Austin, Texas from companies hiring now. Pay range $85K–$130K."
-  (built in `lib/seo.ts`).
+- Keyword first (SEO audit 2026-10-12, 3.1; changed 2026-10-13): H1 "FP&A Jobs in Austin, TX",
+  `<title>` "FP&A Jobs in Austin, TX: 37 Open Roles", meta description like "Browse 37 open FP&A jobs
+  in Austin, Texas. Pay range $85K–$130K. Hiring now: Acme, Beta and Gamma." (built in `lib/seo.ts`;
+  the count stays in the intro sentence under the H1).
+- An "At a glance" box at the top of the sidebar (`components/ListFacts.tsx`, `getListFacts`): open
+  jobs by level, fully remote share, posted in the last 7 days, top hiring companies (linked); rows
+  that say nothing are left out. Unique, true numbers per page (audit section 2).
 - The job list, newest first, 50 per page (`?page=2` is fine for pagination only).
 - **Internal links** (this replaces any dropdown): on `/fpa-jobs` a "FP&A jobs by state" list
   linking to each `/fpa-jobs/[state]` that passes the thin-page rule, with counts; on a state page
@@ -398,7 +428,9 @@ employer's own careers site (fantastic.jobs terms allow job-board use of the ful
 (same category and state). Links to its category, state and city pages.
 
 Shared: header (name, Finance jobs, Locations, Salaries), footer with links to all categories and
-the top 15 states, empty state "No open jobs here yet". Pay format `$85,000–$105,000`.
+the top 15 states, empty state "No open jobs here yet". Pay format `$85,000–$105,000`; pay stated
+per hour/month stays that way (`$25–$32` per hour, card `$25–$32/hr`). Salary figures (pay strips,
+`/salaries`, pay boxes) are yearly and count only full-time pay (section 8, rule 6).
 
 **SEO rules (every public page; added 2026-10-07):**
 1. **Canonical tag** on every public page via Next.js metadata (`alternates.canonical`): an absolute
@@ -406,16 +438,23 @@ the top 15 states, empty state "No open jobs here yet". Pay format `$85,000–$1
    list, which is canonical to itself (`/fpa-jobs?page=2`) and gets "— Page 2" in its `<title>`. (Day 4)
 2. **Real status codes:** unknown slugs, thin pages (below `MIN_JOBS_PER_PAGE`) and hidden jobs
    return a real HTTP 404, never a 200 "not found" page. (Day 4)
+   Uppercase addresses (changed 2026-10-13, SEO audit 1.7; were 404): `proxy.ts` answers 301 to the
+   lowercase address on `SITE_URL` (query kept), e.g. `/FPA-Jobs/Texas` → `/fpa-jobs/texas`.
+   `/admin` and `/api` are left alone.
 3. **BreadcrumbList structured data** (JSON-LD) matching the visible breadcrumbs, on list pages
-   and job pages. (Day 4)
+   and job pages. (Day 4) The home page also has `WebSite` + `Organization` (name `SITE_NAME`,
+   logo `public/logo.png`, 512 px; no SearchAction: no search box) (SEO audit 2026-10-12).
 4. **JobPosting structured data** (JSON-LD) on OPEN job pages only, so jobs can appear in Google
    for Jobs. Only real data, never invented: `title`, `description` (the description text with its
-   line breaks as HTML paragraphs), `datePosted`, `hiringOrganization` (`name`, `logo` when we have
-   it), `jobLocation` (`addressLocality` = city, `addressRegion` = 2-letter state code,
+   line breaks as HTML paragraphs), `datePosted`, `hiringOrganization` (`name`, `logo` and `sameAs` =
+   company website when we have them), `employmentType` when known (same as the job page's chip;
+   "OTHER" left out; added 2026-10-13), `jobLocation` (`addressLocality` = city, `addressRegion` = 2-letter state code,
    `addressCountry` = "US"); for `Remote Solely` jobs use `jobLocationType: "TELECOMMUTE"` plus
    `applicantLocationRequirements` = Country "US"; `baseSalary` only when the employer states pay
-   (`currency` USD, `unitText` YEAR, `minValue`/`maxValue`); `directApply: false`. Leave out any
-   field we don't have (e.g. no `validThrough`, no `employmentType`). Use Google's structured-data
+   (`currency` USD, `unitText` = the unit the employer states, e.g. HOUR or YEAR, with those values,
+   `minValue`/`maxValue`); `directApply: false`. Leave out any
+   field we don't have (e.g. no `validThrough`: we never know a real end date, and inventing one
+   breaks "never invented"; closed jobs lose the markup the night they close). Use Google's structured-data
    guidelines for job postings; after go-live, test a few job pages in Google's Rich Results Test. (Day 5)
 5. **Closed jobs:** the job page stays (HTTP 200) with "This role has closed" + 5 similar open jobs,
    but gets `robots: noindex`, has NO JobPosting markup, and is not in the sitemap.
@@ -423,15 +462,29 @@ the top 15 states, empty state "No open jobs here yet". Pay format `$85,000–$1
 6. **sitemap.xml + robots.txt** (`app/(frontend)/sitemap.ts`, `app/(frontend)/robots.ts`, or wherever
    the Next.js docs say for this project's route groups). The sitemap is built from the database at
    request time and lists: home, every list page that passes the thin-page rule (page 1 only),
-   `/locations`, `/titles` + title pages, `/companies` + company pages, `/salaries` pages, and every
-   open, non-hidden job (`lastModified` = the job's `updatedAt`). If it ever passes 50,000 URLs, split
-   it (Next.js `generateSitemaps`). robots.txt allows everything except `/admin` and `/api`, and
-   links to the sitemap. (Day 5)
+   `/locations`, `/titles` + title pages, `/companies` + company pages (`MIN_JOBS_PER_PAGE`+ jobs),
+   `/salaries` pages, `/about`, `/how-we-source-jobs`, and every
+   open, non-hidden job (`lastModified` = the job's `updatedAt`). robots.txt allows everything except
+   `/admin` and `/api`, and links to the sitemap. (Day 5)
+   **Split by page type (2026-10-13, SEO audit 1.4):** `/sitemap.xml` is a sitemap index
+   (`app/sitemap.xml/route.ts`) of `/sitemaps/{pages,locations,titles,companies,salaries,jobs}.xml`
+   (`app/sitemaps/[file]/route.ts`, built in `lib/sitemap.ts`), so Search Console shows indexing per
+   type. List pages get `lastmod` = the latest change to any job on them (`getLastChanges`,
+   `getSitemapPlaces`); text pages have none. Same URLs as before (checked: 648 = 648).
 7. **Caching (Day 6):** before going live, switch public pages from `force-dynamic` to time-based
    revalidation (refresh at most every 15 minutes) so pages are fast as traffic grows; `/admin`,
    `/api`, the sitemap and anything reading the logged-in user stay dynamic. Check that hiding a job
    in `/admin` still removes it from the site within 15 minutes. If revalidation causes problems with
    Payload, keep `force-dynamic` and tell me.
+   `expireTime: 1800` in `next.config.ts`: cached pages send `s-maxage=900, stale-while-revalidate=900`,
+   so a CDN (CloudFront) serves an old copy for at most 30 minutes (Next.js's default was one year).
+9. **Share previews (2026-10-13, SEO audit 3.7):** every public page has Open Graph + Twitter tags
+   (`socialMetadata` in `lib/seo.ts`: its own title, description, canonical URL) and a 1200×630
+   picture: job pages and `/salaries/<role>` their own (`opengraph-image.tsx`: title, company, place,
+   stated pay / median), all other pages `/og.png` (`app/(frontend)/og.png/route.tsx`). Card design in
+   `lib/og.tsx` (Next.js's built-in `ImageResponse`, no new library). A page with its own picture must
+   pass `ownImage: true` (a picture named in metadata would replace it). `metadataBase` (root layout)
+   makes the picture URLs absolute on `SITE_URL`.
 8. **Google Search Console (Day 7, after the domain is live):** verify the domain, submit
    `SITE_URL/sitemap.xml`, and note it in Notes.
 Our unique value for Google is everything around the copied employer description: the summary, pay
@@ -833,3 +886,68 @@ Notes / decisions log (append here):
     kept; a password with special characters (p@ss:w/rd#1?&=%x, URL-encoded) works, a wrong one is
     refused. Release (463 jobs), create-admin, sync and the site ran over `?sslmode=require`; the database
     showed every connection encrypted (TLS 1.3). Local site unchanged.
+- 2026-10-12 — **STATE: LIVE on TrueFoundry** at https://dev-job-portal.adoptapp.ai (NOT the final domain; the final one isn't released yet),
+  deployed by Rahul (manager) from PR #1 (`finance-community-first-commit` → `dev`, 21 commits, last `f8f1538`).
+  AWS: RDS PostgreSQL (SSL via `?sslmode=require` in `DATABASE_URL`), CloudFront CDN in front of the site.
+  Database came from my local dump (452 open jobs live). Working folder: `~/Desktop/finance-community`
+  (the old `finance-jobs` folder is only a backup). All production settings live ONLY in TrueFoundry
+  (never in `.env.local`/git: the image ignores `.env*`); full list: DEPLOY.md section 2.
+  - Fixed today: `SITE_URL` was `http://localhost:3000` on the live site (sitemap + canonicals showed
+    localhost). Now set to `https://dev-job-portal.adoptapp.ai`: sitemap (1,848 URLs incl. 452 jobs),
+    home and list pages are correct. Changing the domain later = change `SITE_URL` + restart (no code).
+  - Still open (checked 2026-10-12 15:41 UTC, read-only):
+    1. Many job pages and /salaries/[category] still have a `localhost` canonical: copies cached before the
+       fix (Next.js 15-min page cache + CloudFront, which honours `s-maxage=900, stale-while-revalidate`).
+       They refresh on visits; to clear at once: CloudFront invalidation `/*` + restart the site Service.
+    2. NOT done yet, on purpose (waiting for the final domain): `ALLOW_INDEXING=true` and the CloudFront
+       invalidation. Until then robots.txt `Disallow: /` + `X-Robots-Tag: noindex` everywhere (correct).
+       When the final domain is released, in this order: set `SITE_URL` to it + `ALLOW_INDEXING=true` on the
+       site Service → restart → THEN CloudFront invalidation `/*` (invalidating first would let CloudFront
+       re-cache pages with noindex/old canonicals and need a second invalidation).
+    3. Then verify live (sitemap hosts, robots.txt shows Allow + sitemap, no noindex header, canonicals),
+       then Day 7 / SEO rule 8: Google Search Console (verify domain, submit SITE_URL/sitemap.xml),
+       Rich Results Test on 2 live job pages.
+  - Note: CloudFront also caches job pages (≤15 min), so a job hidden in /admin can show on the CDN for
+    up to ~15 min (within SEO rule 7).
+  - Reminders: trial ends 2026-10-13 11:20 UTC → set `MAX_JOBS_PER_RUN=0` on the sync Job; remove
+    `SYNC_TIME_FRAME`/`EXPIRED_TIME_FRAME` from the sync Job after its first run; delete
+    `~/Desktop/finance-db-dump/` and `~/Desktop/finance-production-env/` once Rahul confirms (they hold
+    secrets); local branch `backup-before-ssl-fix` can be deleted. Progress section 13 not yet updated
+    for Day 6/7.
+- 2026-10-13 — SEO audit (2026-10-12, by my manager) Phase 1 done on branch **`seo-fixes`** (from
+  `finance-community-first-commit`; local only, 0 API credits). Each step checked on a production build
+  (MIN_JOBS_PER_PAGE=3, all 1,015 sitemap + test URLs before/after; only intended differences):
+  - Found: the live site has `MIN_JOBS_PER_PAGE=1` (code default is 3) → most of the audit's thin pages.
+    Rahul sets it to 3 in TrueFoundry (no code). Company pages below the minimum: `noindex, follow`, out of
+    the sitemap (they stay: job pages link to them).
+  - `expireTime: 1800` (CDN keeps old copies ≤ 30 min instead of ~1 year); "$" coin out of two H2s.
+  - New Jobs fields (migration `20261012_212424_job_type_website_stated_pay`): `employmentType`,
+    `companyWebsite`, `payUnit`/`payStatedMin`/`payStatedMax`. `load-jobs` fills them on existing jobs
+    (only while empty; yearly pay unchanged), so the Release job updates the live DB with 0 credits.
+    Rehearsed from the Docker image on a copy of the pre-migration DB: 463 filled, re-run 0.
+  - JobPosting: `employmentType`, `hiringOrganization.sameAs`, `baseSalary` in the stated unit. Job page:
+    job-type chip, pay as stated. Salary figures: full-time pay only (US Accounting low $4K → $31K).
+    `validThrough` deliberately NOT added (no real end date; never invent).
+  - Home: WebSite + Organization JSON-LD (`public/logo.png`). New pages `/about`, `/how-we-source-jobs`
+    (footer column "About"). Privacy/Terms: waiting for the manager's text; who runs the site: undecided.
+  - `npm run check-live -- <url> [--staging]` (read-only launch check). On the live site today: 1 of 20
+    sampled job pages still had a localhost canonical (old CDN copy).
+  - **Deploy order (DEPLOY.md 3b): Release job with the new image FIRST, then Site Service + Sync job.**
+    The old site code was tested to work with the new columns, so the order is safe.
+  - Not done (Phase 2/3 or decided against): see the plan in my chat of 2026-10-12/13 and SEO_FIXES.md.
+- 2026-10-13 — SEO audit **Phase 2** done on the same branch `seo-fixes` (PR #2 is a draft: both phases go
+  live in ONE deploy, agreed). Local only, 0 API credits; each step checked on a production build
+  (all sitemap + test URLs before/after, 375 px):
+  - Keyword-first list titles ("FP&A Jobs in Texas: 3 Open Roles"), top employers in descriptions,
+    "At a glance" facts box (`getListFacts`, `components/ListFacts.tsx`).
+  - Open Graph + Twitter tags on every page (`socialMetadata`); pictures: `/og.png` + own pictures on job
+    and salary pages (`lib/og.tsx`). Found: a picture named in metadata REPLACES an opengraph-image file
+    (the docs suggest otherwise), hence `ownImage: true` on those pages.
+  - Sitemap index + 6 parts (`lib/sitemap.ts`), `lastmod` on list pages; same 648 URLs.
+  - `cleanCompany` (franchise numbers / branch locations): Jackson Hewitt 3 pages → 1; the Release job
+    renames existing jobs (job URLs unchanged). Rehearsed from the Docker image on the pre-Phase-1
+    database copy: migrate, 463 filled, 21 renamed, 452 open; second run 0.
+  - Uppercase URLs → 301 to lowercase on `SITE_URL` (`proxy.ts`; a relative Location crashes Next.js's
+    proxy with "Invalid URL", caught in testing).
+  - After deploy: hide the 1 true duplicate job (Platform Accounting Group "Tax Manager", sourceId
+    2402123442) in `/admin`. Privacy/Terms pages: still waiting for the text (last step).

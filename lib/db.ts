@@ -27,6 +27,7 @@ export type Job = {
 	logo: string | null;
 	company_industry: string | null;
 	company_size: string | null;
+	company_website: string | null;
 	category: string;
 	level: string;
 	state: string | null;
@@ -35,8 +36,12 @@ export type Job = {
 	city_slug: string | null;
 	is_remote: number;
 	work_arrangement: string | null;
-	pay_min: number | null;
+	employment_type: string[]; // FULL_TIME, PART_TIME, ... (empty when unknown)
+	pay_min: number | null; // yearly (salary figures)
 	pay_max: number | null;
+	pay_unit: string | null; // as stated: HOUR, DAY, WEEK, MONTH, YEAR (null = per year)
+	pay_stated_min: number | null;
+	pay_stated_max: number | null;
 	summary: string | null;
 	requirements: string | null;
 	description: string | null;
@@ -50,7 +55,7 @@ export type JobCardRow = Pick<
 	Job,
 	| "id" | "slug" | "clean_title" | "company" | "company_slug" | "logo" | "category" | "level"
 	| "state" | "state_slug" | "city" | "city_slug" | "is_remote" | "work_arrangement"
-	| "pay_min" | "pay_max" | "summary" | "date_posted"
+	| "pay_min" | "pay_max" | "pay_unit" | "pay_stated_min" | "pay_stated_max" | "summary" | "date_posted"
 >;
 
 export type CountRow = { key: string; label: string; count: number };
@@ -71,6 +76,7 @@ function toJob(d: JobDoc): Job {
 		logo: d.logo ?? null,
 		company_industry: d.companyIndustry ?? null,
 		company_size: d.companySize ?? null,
+		company_website: d.companyWebsite ?? null,
 		category: d.category,
 		level: d.level,
 		state: d.state ?? null,
@@ -79,8 +85,12 @@ function toJob(d: JobDoc): Job {
 		city_slug: d.citySlug ?? null,
 		is_remote: d.isRemote ? 1 : 0,
 		work_arrangement: d.workArrangement ?? null,
+		employment_type: d.employmentType ?? [],
 		pay_min: d.payMin ?? null,
 		pay_max: d.payMax ?? null,
+		pay_unit: d.payUnit ?? null,
+		pay_stated_min: d.payStatedMin ?? null,
+		pay_stated_max: d.payStatedMax ?? null,
 		summary: d.summary ?? null,
 		requirements: d.requirements ?? null,
 		description: d.description ?? null,
@@ -94,7 +104,7 @@ function toJob(d: JobDoc): Job {
 const CARD_SELECT = {
 	slug: true, cleanTitle: true, company: true, companySlug: true, logo: true, category: true, level: true,
 	state: true, stateSlug: true, city: true, citySlug: true, isRemote: true, workArrangement: true,
-	payMin: true, payMax: true, summary: true, datePosted: true,
+	payMin: true, payMax: true, payUnit: true, payStatedMin: true, payStatedMax: true, summary: true, datePosted: true,
 } as const;
 
 function toCard(d: JobDoc): JobCardRow {
@@ -103,7 +113,8 @@ function toCard(d: JobDoc): JobCardRow {
 		id: j.id, slug: j.slug, clean_title: j.clean_title, company: j.company, company_slug: j.company_slug,
 		logo: j.logo, category: j.category, level: j.level, state: j.state, state_slug: j.state_slug,
 		city: j.city, city_slug: j.city_slug, is_remote: j.is_remote, work_arrangement: j.work_arrangement,
-		pay_min: j.pay_min, pay_max: j.pay_max, summary: j.summary, date_posted: j.date_posted,
+		pay_min: j.pay_min, pay_max: j.pay_max, pay_unit: j.pay_unit, pay_stated_min: j.pay_stated_min,
+		pay_stated_max: j.pay_stated_max, summary: j.summary, date_posted: j.date_posted,
 	};
 }
 
@@ -259,6 +270,42 @@ export async function countJobs(f: ListFilter): Promise<number> {
 	});
 }
 
+// "At a glance" facts for a list page (SEO audit 2026-10-12, section 2: unique, true content per page):
+// open jobs per level, how many are fully remote, how many were posted in the last 7 days, and the
+// companies with the most open jobs (biggest first).
+export type ListFacts = {
+	total: number;
+	levels: Record<string, number>;
+	remote: number;
+	newThisWeek: number;
+	topCompanies: CountRow[];
+};
+
+export async function getListFacts(f: ListFilter): Promise<ListFacts> {
+	return cached("getListFacts", [f], async () => {
+		const values: unknown[] = [];
+		const where = filterSql(f, values);
+		const [rows, companies] = await Promise.all([
+			sql<{ level: string; n: number; remote: number; recent: number }>(
+				`SELECT level::text AS level, COUNT(*)::int AS n,
+            COUNT(*) FILTER (WHERE is_remote)::int AS remote,
+            COUNT(*) FILTER (WHERE date_posted >= now() - interval '7 days')::int AS recent
+     FROM jobs WHERE ${where} GROUP BY level`,
+				values,
+			),
+			getGroupCounts("company", f, 1),
+		]);
+		const sum = (k: "n" | "remote" | "recent") => rows.reduce((s, r) => s + r[k], 0);
+		return {
+			total: sum("n"),
+			levels: Object.fromEntries(rows.map((r) => [r.level, r.n])),
+			remote: sum("remote"),
+			newThisWeek: sum("recent"),
+			topCompanies: companies.slice(0, 5),
+		};
+	});
+}
+
 // State and city names for slugs (from open jobs), e.g. { state: "Texas", city: "Austin" }.
 export async function getPlaceNames(
 	stateSlug: string,
@@ -401,18 +448,31 @@ export async function getCategoryPlaceCounts(
 
 // ---- Pay -------------------------------------------------------------------------------------
 
+// Salary figures (low / median / high) leave out part-time, contract, temporary and intern jobs:
+// their pay is not comparable to a full-time yearly salary (SEO audit 2026-10-12, item 4.5).
+// Jobs with no known employment type still count.
+export const PAY_FIGURES_EXCLUDE = ["PART_TIME", "CONTRACTOR", "TEMPORARY", "INTERN"];
+const PAY_COUNTS_SQL = `NOT EXISTS (SELECT 1 FROM jobs_employment_type t
+  WHERE t.parent_id = jobs.id AND t.value IN (${PAY_FIGURES_EXCLUDE.map((v) => `'${v}'`).join(", ")}))`;
+
+export function countsInPayFigures(job: Pick<Job, "employment_type">): boolean {
+	return !job.employment_type.some((t) => PAY_FIGURES_EXCLUDE.includes(t));
+}
+
 // Low / median / high yearly pay over open jobs that state pay (filters are optional).
 // Low = lowest stated figure, high = highest; median uses each job's midpoint.
+// withPay = jobs counted (stating pay, not excluded above); total = all open jobs matching.
 export async function getPayStats(filters: ListFilter): Promise<PayStats | null> {
 	return cached("getPayStats", [filters], async () => {
 		const values: unknown[] = [];
 		const where = filterSql(filters, values);
-		const rows = await sql<{ pay_min: number | null; pay_max: number | null }>(
-			`SELECT pay_min::float8 AS pay_min, pay_max::float8 AS pay_max FROM jobs WHERE ${where}`,
+		const rows = await sql<{ pay_min: number | null; pay_max: number | null; counts: boolean }>(
+			`SELECT pay_min::float8 AS pay_min, pay_max::float8 AS pay_max, ${PAY_COUNTS_SQL} AS counts
+     FROM jobs WHERE ${where}`,
 			values,
 		);
 
-		const paid = rows.filter((r) => r.pay_min || r.pay_max);
+		const paid = rows.filter((r) => r.counts && (r.pay_min || r.pay_max));
 		if (paid.length === 0) return null;
 		const mids = paid.map((r) => payMidpoint(r.pay_min, r.pay_max)!).sort((a, b) => a - b);
 		const half = Math.floor(mids.length / 2);
@@ -428,15 +488,29 @@ export async function getPayStats(filters: ListFilter): Promise<PayStats | null>
 
 export type PayGroupRow = PayStats & { key: string; label: string };
 
-// Pay per category or per state (same figures as getPayStats), only for groups where at least
-// `minWithPay` open jobs state pay. total = all open jobs in the group (with or without pay).
-export async function getPayByGroup(by: "category" | "state", f: ListFilter, minWithPay: number): Promise<PayGroupRow[]> {
-	return cached("getPayByGroup", [by, f, minWithPay], () => {
+// Pay per category, state, job title or level (same figures as getPayStats), only for groups where at
+// least `minWithPay` counted open jobs state pay, from at least `minCompanies` different companies.
+// total = all open jobs in the group (with or without pay).
+export async function getPayByGroup(
+	by: "category" | "state" | "title" | "level",
+	f: ListFilter,
+	minWithPay: number,
+	minCompanies = 1,
+): Promise<PayGroupRow[]> {
+	return cached("getPayByGroup", [by, f, minWithPay, minCompanies], () => {
 		const values: unknown[] = [];
 		const where = filterSql(f, values);
-		const [key, label] = by === "state" ? ["state_slug", "MIN(state)"] : ["category::text", "category::text"];
-		values.push(minWithPay);
-		const paid = "(pay_min > 0 OR pay_max > 0)";
+		const [key, label] = {
+			category: ["category::text", "category::text"],
+			state: ["state_slug", "MIN(state)"],
+			title: ["title_slug", "MIN(clean_title)"],
+			level: ["level::text", "level::text"],
+		}[by];
+		const paid = `((pay_min > 0 OR pay_max > 0) AND ${PAY_COUNTS_SQL})`;
+		const minWithPayParam = values.push(minWithPay); // its $n number
+		// Only when asked for (minCompanies > 1), so the existing callers' results stay exactly the same.
+		const companies =
+			minCompanies > 1 ? `AND COUNT(DISTINCT company_slug) FILTER (WHERE ${paid}) >= $${values.push(minCompanies)}` : "";
 		return sql<PayGroupRow>(
 			`SELECT ${key} AS key, ${label} AS label,
             MIN(COALESCE(NULLIF(pay_min, 0), pay_max)) FILTER (WHERE ${paid})::float8 AS low,
@@ -447,10 +521,44 @@ export async function getPayByGroup(by: "category" | "state", f: ListFilter, min
             (COUNT(*) FILTER (WHERE ${paid}))::int AS "withPay",
             COUNT(*)::int AS total
      FROM jobs WHERE ${where} AND ${key} IS NOT NULL
-     GROUP BY 1 HAVING COUNT(*) FILTER (WHERE ${paid}) >= $${values.length}
+     GROUP BY 1 HAVING COUNT(*) FILTER (WHERE ${paid}) >= $${minWithPayParam} ${companies}
      ORDER BY "withPay" DESC, label ASC`,
 			values,
 		);
+	});
+}
+
+// Job titles that get a salary page (/salaries/titles/<title>; SEO audit 2026-10-12, section 5): at
+// least `minWithPay` full-time listings that state pay, from at least SALARY_TITLE_MIN_COMPANIES
+// different companies, so a page never rests on one employer. The one list used by the page, its
+// links and the sitemap. Biggest first.
+export const SALARY_TITLE_MIN_COMPANIES = 3;
+
+export async function getTitleSalaries(minWithPay: number): Promise<PayGroupRow[]> {
+	return getPayByGroup("title", {}, minWithPay, SALARY_TITLE_MIN_COMPANIES);
+}
+
+// The open jobs behind a page's salary figures (stating pay, not part-time/contract/temporary/intern),
+// newest first, as job cards.
+export async function getPayListings(f: ListFilter, limit: number): Promise<JobCardRow[]> {
+	return cached("getPayListings", [f, limit], async () => {
+		const values: unknown[] = [];
+		const where = filterSql(f, values);
+		const rows = await sql<{ id: number }>(
+			`SELECT id FROM jobs WHERE ${where} AND (pay_min > 0 OR pay_max > 0) AND ${PAY_COUNTS_SQL}`,
+			values,
+		);
+		if (rows.length === 0) return [];
+		const payload = await payloadClient();
+		const { docs } = await payload.find({
+			collection: "jobs",
+			where: { id: { in: rows.map((r) => r.id) } },
+			sort: ["-datePosted", "-id"],
+			limit,
+			depth: 0,
+			select: CARD_SELECT,
+		});
+		return (docs as JobDoc[]).map(toCard);
 	});
 }
 
@@ -480,23 +588,42 @@ export async function getCompanyInfo(companySlug: string): Promise<{
 // ---- Sitemap ---------------------------------------------------------------------------------
 
 // Every state / city page (all finance and per category) with at least MIN_JOBS_PER_PAGE open jobs.
-// category null = /finance-jobs/...; city null = the state page.
-export async function getSitemapPlaces(): Promise<{ category: string | null; state: string; city: string | null }[]> {
+// category null = /finance-jobs/...; city null = the state page. lastmod = the latest change to any
+// job in that place (opening, closing, hiding or an edit), so the sitemap's lastmod is true.
+export async function getSitemapPlaces(): Promise<{ category: string | null; state: string; city: string | null; lastmod: string }[]> {
 	const min = await minJobsPerPage();
 	return cached("getSitemapPlaces", [min], () =>
-		sql<{ category: string | null; state: string; city: string | null }>(
-			`SELECT category, state, city FROM (
+		sql<{ category: string | null; state: string; city: string | null; lastmod: string }>(
+			`SELECT category, state, city, lastmod FROM (
        SELECT CASE WHEN GROUPING(category) = 1 THEN NULL ELSE category::text END AS category,
               state_slug AS state,
               CASE WHEN GROUPING(city_slug) = 1 THEN NULL ELSE city_slug END AS city,
-              GROUPING(city_slug) AS no_city, city_slug AS raw_city
-       FROM jobs WHERE ${VISIBLE_SQL} AND state_slug IS NOT NULL
+              GROUPING(city_slug) AS no_city, city_slug AS raw_city,
+              to_char(MAX(updated_at) AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS lastmod
+       FROM jobs WHERE state_slug IS NOT NULL
        GROUP BY GROUPING SETS ((state_slug), (state_slug, city_slug), (category, state_slug), (category, state_slug, city_slug))
-       HAVING COUNT(*) >= $1
+       HAVING COUNT(*) FILTER (WHERE ${VISIBLE_SQL}) >= $1
      ) g WHERE no_city = 1 OR raw_city IS NOT NULL`,
 			[min],
 		),
 	);
+}
+
+// Latest change to any job (opening, closing, hiding or an edit) per group, for the sitemap's
+// lastmod on list pages: { "": overall, "<key>": per category / level / title / company }.
+// remote = only fully-remote jobs (for the /…/remote pages).
+export async function getLastChanges(
+	by: "all" | "category" | "level" | "title" | "company",
+	remote = false,
+): Promise<Record<string, string>> {
+	return cached("getLastChanges", [by, remote], async () => {
+		const key = { all: "''", category: "category::text", level: "level::text", title: "title_slug", company: "company_slug" }[by];
+		const rows = await sql<{ key: string | null; lastmod: string }>(
+			`SELECT ${key} AS key, to_char(MAX(updated_at) AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS lastmod
+     FROM jobs ${remote ? "WHERE is_remote = true" : ""} GROUP BY 1`,
+		);
+		return Object.fromEntries(rows.filter((r) => r.key !== null).map((r) => [r.key, r.lastmod]));
+	});
 }
 
 // Every open, non-hidden job: slug + last change (sitemap).

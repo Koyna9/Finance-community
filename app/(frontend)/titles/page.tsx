@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import AzIndex from "@/components/AzIndex";
 import { getGroupCounts, minJobsPerPage } from "@/lib/db";
-import { canonicalUrl } from "@/lib/seo";
+import { canonicalUrl, socialMetadata } from "@/lib/seo";
 
 // A–Z list of job titles with MIN_JOBS_PER_PAGE+ open jobs (the same rule as their pages).
 export const dynamic = "force-dynamic";
@@ -9,12 +9,10 @@ export const dynamic = "force-dynamic";
 const PATH = "/titles";
 
 export async function generateMetadata(): Promise<Metadata> {
-	return {
-		title: "Finance Job Titles A–Z",
-		description:
-			"Every finance job title with open roles at US companies, from accountant to CFO, with the number of open jobs for each.",
-		alternates: { canonical: canonicalUrl(PATH) },
-	};
+	const title = "Finance Job Titles A–Z";
+	const description =
+		"Every finance job title with open roles at US companies, from accountant to CFO, with the number of open jobs for each.";
+	return { title, description, alternates: { canonical: canonicalUrl(PATH) }, ...socialMetadata(title, description, PATH) };
 }
 
 export default async function TitlesPage() {

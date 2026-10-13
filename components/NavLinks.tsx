@@ -9,10 +9,13 @@ const LINKS = [
 	{ href: "/salaries", label: "Salaries" },
 ];
 
+// Pages whose URL ends in "-jobs" but that are not job lists.
+const NOT_LISTS = ["/how-we-source-jobs"];
+
 // Which nav item is active: list pages (/finance-jobs, /fpa-jobs/texas, /entry-level-finance-jobs)
 // count as "Finance jobs".
 function isActive(pathname: string, href: string): boolean {
-	if (href === "/finance-jobs") return /^\/[a-z-]+-jobs(\/|$)/.test(pathname);
+	if (href === "/finance-jobs") return /^\/[a-z-]+-jobs(\/|$)/.test(pathname) && !NOT_LISTS.includes(pathname);
 	return pathname === href || pathname.startsWith(`${href}/`);
 }
 
