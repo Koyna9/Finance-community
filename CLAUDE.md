@@ -137,7 +137,9 @@ finance-jobs/
   lib/cache.ts              Redis cache used only by lib/db.ts reads (`cached`) + `bumpCacheVersion`
                             for the Jobs/CategoryPages hooks and the end of sync.ts / load-jobs.ts
   lib/format.ts             pay (USD) / date / label helpers
-  lib/seo.ts                page title + meta description builders
+  lib/seo.ts                page title + meta description builders, share tags (socialMetadata)
+  lib/og.tsx                share-picture card (Open Graph images, 1200×630)
+  lib/sitemap.ts            sitemap index + parts (served by app/sitemap.xml/ and app/sitemaps/[file]/)
   components/               one file per DESIGN.md component: Header, Footer, Breadcrumbs,
                             CompanyTile, Chip, PayChip, JobCard, ApplyButton, SidebarBox, ...
   components/PlaceLinks.tsx "Browse by state" / "Browse by city" link lists
@@ -453,9 +455,13 @@ per hour/month stays that way (`$25–$32` per hour, card `$25–$32/hr`). Salar
    request time and lists: home, every list page that passes the thin-page rule (page 1 only),
    `/locations`, `/titles` + title pages, `/companies` + company pages (`MIN_JOBS_PER_PAGE`+ jobs),
    `/salaries` pages, `/about`, `/how-we-source-jobs`, and every
-   open, non-hidden job (`lastModified` = the job's `updatedAt`). If it ever passes 50,000 URLs, split
-   it (Next.js `generateSitemaps`). robots.txt allows everything except `/admin` and `/api`, and
-   links to the sitemap. (Day 5)
+   open, non-hidden job (`lastModified` = the job's `updatedAt`). robots.txt allows everything except
+   `/admin` and `/api`, and links to the sitemap. (Day 5)
+   **Split by page type (2026-10-13, SEO audit 1.4):** `/sitemap.xml` is a sitemap index
+   (`app/sitemap.xml/route.ts`) of `/sitemaps/{pages,locations,titles,companies,salaries,jobs}.xml`
+   (`app/sitemaps/[file]/route.ts`, built in `lib/sitemap.ts`), so Search Console shows indexing per
+   type. List pages get `lastmod` = the latest change to any job on them (`getLastChanges`,
+   `getSitemapPlaces`); text pages have none. Same URLs as before (checked: 648 = 648).
 7. **Caching (Day 6):** before going live, switch public pages from `force-dynamic` to time-based
    revalidation (refresh at most every 15 minutes) so pages are fast as traffic grows; `/admin`,
    `/api`, the sitemap and anything reading the logged-in user stay dynamic. Check that hiding a job
@@ -463,6 +469,13 @@ per hour/month stays that way (`$25–$32` per hour, card `$25–$32/hr`). Salar
    Payload, keep `force-dynamic` and tell me.
    `expireTime: 1800` in `next.config.ts`: cached pages send `s-maxage=900, stale-while-revalidate=900`,
    so a CDN (CloudFront) serves an old copy for at most 30 minutes (Next.js's default was one year).
+9. **Share previews (2026-10-13, SEO audit 3.7):** every public page has Open Graph + Twitter tags
+   (`socialMetadata` in `lib/seo.ts`: its own title, description, canonical URL) and a 1200×630
+   picture: job pages and `/salaries/<role>` their own (`opengraph-image.tsx`: title, company, place,
+   stated pay / median), all other pages `/og.png` (`app/(frontend)/og.png/route.tsx`). Card design in
+   `lib/og.tsx` (Next.js's built-in `ImageResponse`, no new library). A page with its own picture must
+   pass `ownImage: true` (a picture named in metadata would replace it). `metadataBase` (root layout)
+   makes the picture URLs absolute on `SITE_URL`.
 8. **Google Search Console (Day 7, after the domain is live):** verify the domain, submit
    `SITE_URL/sitemap.xml`, and note it in Notes.
 Our unique value for Google is everything around the copied employer description: the summary, pay

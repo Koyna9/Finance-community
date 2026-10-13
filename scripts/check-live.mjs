@@ -72,10 +72,22 @@ else {
 }
 check(home.text.includes('"@type":"WebSite"'), "home has WebSite structured data");
 
-// 4. Sitemap: every URL on this domain
+// 4. Sitemap: an index of parts (/sitemaps/<type>.xml); every URL in every part on this domain
 const sitemap = await get("/sitemap.xml");
 check(sitemap.status === 200, "sitemap.xml answers 200", String(sitemap.status));
-const locs = [...sitemap.text.matchAll(/<loc>([^<]*)<\/loc>/g)].map((m) => m[1]);
+const locsIn = (xml) => [...xml.matchAll(/<loc>([^<]*)<\/loc>/g)].map((m) => m[1]);
+let locs = locsIn(sitemap.text);
+if (sitemap.text.includes("<sitemapindex")) {
+	const parts = locs;
+	locs = [];
+	let badParts = [];
+	for (const part of parts) {
+		const r = part.startsWith(base) ? await get(part.slice(base.length)) : { status: 0, text: "" };
+		if (r.status !== 200) badParts.push(`${part} -> ${r.status}`);
+		locs.push(...locsIn(r.text));
+	}
+	check(badParts.length === 0, `${parts.length} sitemap parts answer 200 on this domain`, badParts.slice(0, 3).join(", "));
+}
 const offDomain = locs.filter((u) => !u.startsWith(`${base}/`) && u !== base);
 check(locs.length > 0, "sitemap lists URLs", `${locs.length} URLs`);
 check(offDomain.length === 0, "every sitemap URL is on this domain", offDomain.slice(0, 3).join(", "));

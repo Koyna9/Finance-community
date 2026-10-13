@@ -540,23 +540,42 @@ export async function getCompanyInfo(companySlug: string): Promise<{
 // ---- Sitemap ---------------------------------------------------------------------------------
 
 // Every state / city page (all finance and per category) with at least MIN_JOBS_PER_PAGE open jobs.
-// category null = /finance-jobs/...; city null = the state page.
-export async function getSitemapPlaces(): Promise<{ category: string | null; state: string; city: string | null }[]> {
+// category null = /finance-jobs/...; city null = the state page. lastmod = the latest change to any
+// job in that place (opening, closing, hiding or an edit), so the sitemap's lastmod is true.
+export async function getSitemapPlaces(): Promise<{ category: string | null; state: string; city: string | null; lastmod: string }[]> {
 	const min = await minJobsPerPage();
 	return cached("getSitemapPlaces", [min], () =>
-		sql<{ category: string | null; state: string; city: string | null }>(
-			`SELECT category, state, city FROM (
+		sql<{ category: string | null; state: string; city: string | null; lastmod: string }>(
+			`SELECT category, state, city, lastmod FROM (
        SELECT CASE WHEN GROUPING(category) = 1 THEN NULL ELSE category::text END AS category,
               state_slug AS state,
               CASE WHEN GROUPING(city_slug) = 1 THEN NULL ELSE city_slug END AS city,
-              GROUPING(city_slug) AS no_city, city_slug AS raw_city
-       FROM jobs WHERE ${VISIBLE_SQL} AND state_slug IS NOT NULL
+              GROUPING(city_slug) AS no_city, city_slug AS raw_city,
+              to_char(MAX(updated_at) AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS lastmod
+       FROM jobs WHERE state_slug IS NOT NULL
        GROUP BY GROUPING SETS ((state_slug), (state_slug, city_slug), (category, state_slug), (category, state_slug, city_slug))
-       HAVING COUNT(*) >= $1
+       HAVING COUNT(*) FILTER (WHERE ${VISIBLE_SQL}) >= $1
      ) g WHERE no_city = 1 OR raw_city IS NOT NULL`,
 			[min],
 		),
 	);
+}
+
+// Latest change to any job (opening, closing, hiding or an edit) per group, for the sitemap's
+// lastmod on list pages: { "": overall, "<key>": per category / level / title / company }.
+// remote = only fully-remote jobs (for the /…/remote pages).
+export async function getLastChanges(
+	by: "all" | "category" | "level" | "title" | "company",
+	remote = false,
+): Promise<Record<string, string>> {
+	return cached("getLastChanges", [by, remote], async () => {
+		const key = { all: "''", category: "category::text", level: "level::text", title: "title_slug", company: "company_slug" }[by];
+		const rows = await sql<{ key: string | null; lastmod: string }>(
+			`SELECT ${key} AS key, to_char(MAX(updated_at) AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS lastmod
+     FROM jobs ${remote ? "WHERE is_remote = true" : ""} GROUP BY 1`,
+		);
+		return Object.fromEntries(rows.filter((r) => r.key !== null).map((r) => [r.key, r.lastmod]));
+	});
 }
 
 // Every open, non-hidden job: slug + last change (sitemap).
