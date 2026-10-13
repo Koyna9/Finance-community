@@ -57,7 +57,7 @@ Days 1–3 were built on Cloudflare D1 locally; Day 4A switches them over.
 | Cache | **Redis** (shared cache for page data, `lib/cache.ts`, cache-aside, 15 minutes per item, keys under `fc:`). Locally: `redis:7.2-alpine` in `docker-compose.yml`, port 6379, password required. Online: a **managed Redis on the same cloud as TrueFoundry** (probably AWS ElastiCache or GCP Memorystore): Redis OSS 7.x or Valkey 7.2/8, one primary, cluster mode disabled (not ElastiCache Serverless), smallest node (well under 100 MB needed), `maxmemory-policy volatile-lru`, no persistence/backups, TLS on, password on, private network only (reachable only from the TrueFoundry cluster) |
 | Nightly job | Node script `jobs/sync.ts`, run locally with `npm run sync`; online as a **TrueFoundry Job with a schedule trigger** `0 2 * * *` (timezone UTC) |
 | Hosting (from Day 6) | **TrueFoundry**: one Service (the Next.js + Payload app, from a Docker image) + one scheduled Job (same image, runs the sync command) |
-| Settings + secrets | `.env.local` locally (`DATABASE_URL`, `PAYLOAD_SECRET`, `FANTASTIC_JOBS_KEY`, `MIN_JOBS_PER_PAGE=1`, `SITE_URL=http://localhost:3000`, `REDIS_PASSWORD`, `REDIS_URL`); TrueFoundry secrets / environment variables online (`MIN_JOBS_PER_PAGE=3`, `SITE_URL` = the live domain, `REDIS_URL=rediss://:<password>@<host>:<port>` and, if the cloud's TLS needs it (GCP), `REDIS_CA_CERT` = its CA certificate; both for the site Service AND the sync Job; database SSL on AWS RDS: `?sslmode=require` at the end of `DATABASE_URL` for every workload, see `lib/database-pool.ts` and DEPLOY.md 2a) |
+| Settings + secrets | `.env.local` locally (`DATABASE_URL`, `PAYLOAD_SECRET`, `FANTASTIC_JOBS_KEY`, `MIN_JOBS_PER_PAGE=3`, `SITE_URL=http://localhost:3000`, `REDIS_PASSWORD`, `REDIS_URL`); TrueFoundry secrets / environment variables online (`MIN_JOBS_PER_PAGE=3`, `SITE_URL` = the live domain, `REDIS_URL=rediss://:<password>@<host>:<port>` and, if the cloud's TLS needs it (GCP), `REDIS_CA_CERT` = its CA certificate; both for the site Service AND the sync Job; database SSL on AWS RDS: `?sslmode=require` at the end of `DATABASE_URL` for every workload, see `lib/database-pool.ts` and DEPLOY.md 2a) |
 | Domain | Company domain/DNS pointed at the TrueFoundry service (Day 7) |
 | Local tools | Node 24, OrbStack (Docker 29, Compose 5) |
 
@@ -102,7 +102,7 @@ finance-jobs/
   CLAUDE.md, DAY_PROMPTS.md
   docker-compose.yml        local PostgreSQL 17 (service "postgres", named volume postgres-data)
                             + local Redis 7.2 cache (service "redis", no volume)
-  .env.local                DATABASE_URL, PAYLOAD_SECRET, FANTASTIC_JOBS_KEY, MIN_JOBS_PER_PAGE=1,
+  .env.local                DATABASE_URL, PAYLOAD_SECRET, FANTASTIC_JOBS_KEY, MIN_JOBS_PER_PAGE=3,
                             REDIS_PASSWORD, REDIS_URL (git-ignored)
   .env.example              every setting name with placeholder values (committed; copy to .env.local)
   Dockerfile                builds the app image for TrueFoundry (Day 6)
@@ -400,8 +400,9 @@ at least `MIN_JOBS_PER_PAGE` open jobs; otherwise return 404 and never link to i
 pages (and the `/titles` index) use the same minimum. Company pages exist with 1+ open job (their
 job pages link to them), but below `MIN_JOBS_PER_PAGE` they get `noindex, follow` and are left out
 of the sitemap (SEO audit 2026-10-12).
-`MIN_JOBS_PER_PAGE` is a setting, never a hard-coded number: **1 locally** (`.env.local`, so every
-page type can be built with only ~100 dev jobs) and **3 in production** (TrueFoundry environment variable).
+`MIN_JOBS_PER_PAGE` is a setting, never a hard-coded number: **3 locally** (`.env.local`; was 1 while
+building with ~100 dev jobs, changed 2026-10-13 so localhost looks like the live site) and **3 in
+production** (TrueFoundry environment variable).
 Hidden jobs (`hidden = true`) never count toward any page, count or pay figure.
 
 **Every list page shows:**
