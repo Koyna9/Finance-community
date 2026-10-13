@@ -933,3 +933,19 @@ Notes / decisions log (append here):
   - **Deploy order (DEPLOY.md 3b): Release job with the new image FIRST, then Site Service + Sync job.**
     The old site code was tested to work with the new columns, so the order is safe.
   - Not done (Phase 2/3 or decided against): see the plan in my chat of 2026-10-12/13 and SEO_FIXES.md.
+- 2026-10-13 — SEO audit **Phase 2** done on the same branch `seo-fixes` (PR #2 is a draft: both phases go
+  live in ONE deploy, agreed). Local only, 0 API credits; each step checked on a production build
+  (all sitemap + test URLs before/after, 375 px):
+  - Keyword-first list titles ("FP&A Jobs in Texas: 3 Open Roles"), top employers in descriptions,
+    "At a glance" facts box (`getListFacts`, `components/ListFacts.tsx`).
+  - Open Graph + Twitter tags on every page (`socialMetadata`); pictures: `/og.png` + own pictures on job
+    and salary pages (`lib/og.tsx`). Found: a picture named in metadata REPLACES an opengraph-image file
+    (the docs suggest otherwise), hence `ownImage: true` on those pages.
+  - Sitemap index + 6 parts (`lib/sitemap.ts`), `lastmod` on list pages; same 648 URLs.
+  - `cleanCompany` (franchise numbers / branch locations): Jackson Hewitt 3 pages → 1; the Release job
+    renames existing jobs (job URLs unchanged). Rehearsed from the Docker image on the pre-Phase-1
+    database copy: migrate, 463 filled, 21 renamed, 452 open; second run 0.
+  - Uppercase URLs → 301 to lowercase on `SITE_URL` (`proxy.ts`; a relative Location crashes Next.js's
+    proxy with "Invalid URL", caught in testing).
+  - After deploy: hide the 1 true duplicate job (Platform Accounting Group "Tax Manager", sourceId
+    2402123442) in `/admin`. Privacy/Terms pages: still waiting for the text (last step).
