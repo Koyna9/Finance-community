@@ -11,3 +11,6 @@ tsconfig.tsbuildinfo
 .DS_Store
 npm-debug.log*
 # data/ IS copied (committed): the release job's load-jobs reads it.
+# Except the saved lists of closed job ids (~35 MB): written by past sync runs, never read by
+# anything (load-jobs reads only the *-active-* files).
+data/sync/*-expired-*.json
