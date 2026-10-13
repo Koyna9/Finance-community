@@ -2,7 +2,9 @@
 // NO API calls: it only reads data/*.json. Jobs that already exist (same sourceId) are not
 // re-created, so admin edits are never overwritten and the script is safe to run again.
 // Existing jobs only get fields added after they were loaded (employmentType, companyWebsite, stated
-// pay; SEO audit 2026-10-12), and only while those fields are still empty.
+// pay; SEO audit 2026-10-12), and only while those fields are still empty. Company names on every
+// job in the database get the current clean-up (cleanCompany: "Jackson Hewitt - 1558" -> "Jackson
+// Hewitt"); job slugs (page addresses) never change.
 //
 //   npm run load-jobs          (= payload run scripts/load-jobs.ts; reads .env.local)
 
@@ -11,7 +13,7 @@ import { getPayload } from "payload";
 import { bumpCacheVersion } from "../lib/cache";
 import config from "../payload.config";
 import type { Job } from "../payload-types";
-import { toJobData, toRow } from "../shared/rules.js";
+import { cleanCompany, slugify, toJobData, toRow } from "../shared/rules.js";
 
 // The backfill files, then the new jobs saved by each sync run (data/sync/<time>-active-<offset>.json,
 // oldest first). The sync writes its jobs straight into the database, so without these files a fresh
@@ -39,7 +41,15 @@ const existing = await payload.find({
 	collection: "jobs",
 	pagination: false,
 	depth: 0,
-	select: { sourceId: true, payMin: true, payMax: true, payUnit: true, employmentType: true, companyWebsite: true },
+	select: {
+		sourceId: true,
+		company: true,
+		payMin: true,
+		payMax: true,
+		payUnit: true,
+		employmentType: true,
+		companyWebsite: true,
+	},
 });
 const have = new Map(existing.docs.map((d) => [Number(d.sourceId), d as Job]));
 
@@ -87,10 +97,21 @@ console.log(
 	`Unique jobs in files: ${byId.size}. Created: ${created}. Already there: ${skipped} (newer fields filled in: ${filled}). Rejected by toRow: ${rejected}.`,
 );
 
-// 4. Summary of open jobs, to compare with the Day 2 numbers.
+// 4. Company-name clean-up on jobs that were already in the database (also those without a saved
+//    file, e.g. added by the live sync). Only the name and its company page address change.
+let renamed = 0;
+for (const doc of existing.docs as Job[]) {
+	const cleaned = doc.company ? cleanCompany(doc.company) : null;
+	if (!cleaned || cleaned === doc.company) continue;
+	await payload.update({ collection: "jobs", id: doc.id, data: { company: cleaned, companySlug: slugify(cleaned) }, depth: 0 });
+	renamed++;
+}
+console.log(`Company names cleaned up: ${renamed}.`);
+
+// 5. Summary of open jobs, to compare with the Day 2 numbers.
 const total = await payload.count({ collection: "jobs", where: { status: { equals: "open" } } });
 console.log(`Open jobs in Payload: ${total.totalDocs}`);
 
-// 5. Clear the site's Redis cache, after all writes are committed (lib/cache.ts; no-op without REDIS_URL).
+// 6. Clear the site's Redis cache, after all writes are committed (lib/cache.ts; no-op without REDIS_URL).
 if (await bumpCacheVersion()) console.log("Site cache cleared (new cache version).");
 process.exit(0);

@@ -1,7 +1,7 @@
 // Sorting rules (CLAUDE.md section 8). Used by scripts/backfill.mjs AND the sync worker.
 // toRow(apiJob) turns one fantastic.jobs job into one `jobs` row, or returns null to skip it.
 
-import { normalizeState } from "./states.js";
+import { normalizeState, STATE_CODES } from "./states.js";
 
 // ---- Values to confirm against real data (Day 2) -------------------------------------------
 
@@ -157,6 +157,22 @@ export function companyWebsite(job) {
   }
 }
 
+// ---- Company name --------------------------------------------------------------------------
+
+const STATE_CODE_SET = new Set(Object.values(STATE_CODES));
+
+// Company names arrive with notes or branch details glued on (SEO audit 2026-10-12, 3.5):
+//   "No relevant LinkedIn company found.PIPESTONE"       -> "PIPESTONE"
+//   "Jackson Hewitt - 1558" (franchise/store number)     -> "Jackson Hewitt"
+//   "Kirby-Smith Machinery, Inc. - Oklahoma City, OK"    -> "Kirby-Smith Machinery, Inc."
+// Real names with a dash stay ("DGI - Menard INC", "ServiceMaster Restore 10188 - Doral").
+export function cleanCompany(name) {
+  let n = String(name ?? "").replace(/no relevant linkedin company found\.?/gi, "").replace(/\s+/g, " ").trim();
+  n = n.replace(/ - \d+$/, "");
+  n = n.replace(/ - [A-Za-z][A-Za-z .'-]*, ([A-Z]{2})$/, (match, code) => (STATE_CODE_SET.has(code) ? "" : match));
+  return n.trim() || null;
+}
+
 // ---- Slugs ---------------------------------------------------------------------------------
 
 export function slugify(text) {
@@ -230,8 +246,8 @@ export function toRow(job) {
 
   const clean_title = cleanTitle(title);
   const title_slug = slugify(clean_title);
-  // Some company names arrive with a data note glued on: "No relevant LinkedIn company found.PIPESTONE".
-  const company = String(job.organization ?? "").replace(/no relevant linkedin company found\.?/gi, "").trim() || null;
+  // Notes, franchise numbers and branch locations glued to the name are removed (cleanCompany).
+  const company = cleanCompany(job.organization);
   const company_slug = company ? slugify(company) : null;
   const state_slug = state ? slugify(state) : null;
   const city_slug = city ? slugify(city) : null;

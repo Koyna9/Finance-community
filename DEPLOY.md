@@ -88,7 +88,8 @@ the **Release job**, and it must run BEFORE the new site code starts.
 2. If the new version adds a migration (a new file in `migrations/`): set the **Release job** to the
    new image and **run it first**. It adds the new columns, then `load-jobs` fills them in on existing
    jobs from the saved files in the image: 0 API credits, nothing re-created, admin edits kept. Its log
-   ends with `Created: 0. Already there: N (newer fields filled in: N). …` and `Open jobs in Payload: …`.
+   ends with `Created: 0. Already there: N (newer fields filled in: N). …`, `Company names cleaned up: N.`
+   and `Open jobs in Payload: …`.
    The running site keeps working meanwhile (the old code ignores the new columns; tested).
 3. **Then** set the **Site Service** and the **Sync job** to the new image (the Service restarts).
 4. Without a new migration, steps 1 and 3 are enough (running the Release job anyway does no harm).

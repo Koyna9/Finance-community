@@ -125,7 +125,7 @@ finance-jobs/
   scripts/check-live.mjs    `npm run check-live -- <url> [--staging]`: read-only launch check (domain in
                             canonicals + sitemap, robots.txt, noindex header, JobPosting)
   scripts/backfill.mjs      fetches jobs (capped) and saves raw files: --test (5), dev (BACKFILL_MAX), --fresh
-  scripts/load-jobs.ts      saved raw files (incl. data/sync/*-active-*.json) -> toRow -> Payload Jobs (create new by sourceId; fill newer empty fields on existing jobs; no API calls)
+  scripts/load-jobs.ts      saved raw files (incl. data/sync/*-active-*.json) -> toRow -> Payload Jobs (create new by sourceId; fill newer empty fields on existing jobs; clean company names; no API calls)
                             (replaces scripts/make-seed.mjs)
   jobs/sync.ts              nightly sync (section 10); `npm run sync`
   design/DESIGN.md          approved UI design (section 11) + design/mockups/ (reference only)
@@ -343,7 +343,11 @@ articles/blogs and educational content; keep the setup simple so they can be add
    IT, BSA, AWM. "Sr. Financial Analyst - FP&A (Austin)" → "Financial Analyst";
    "FP&A Manager" → "FP&A Manager"; "Senior Manager, IT Audit" → "IT Audit Manager".
    **Company name:** strip the data note "No relevant LinkedIn company found." (it arrives glued
-   to some names: "No relevant LinkedIn company found.PIPESTONE" → "PIPESTONE").
+   to some names: "No relevant LinkedIn company found.PIPESTONE" → "PIPESTONE"). Also (`cleanCompany`,
+   2026-10-13, SEO audit 3.5) a trailing franchise/store number ("Jackson Hewitt - 1558" → "Jackson
+   Hewitt") or branch location " - City, ST" with a real state code, and double spaces. Real names with
+   a dash stay ("DGI - Menard INC"). `load-jobs` applies it to jobs already in the database too
+   (name + `companySlug`; job slugs never change).
 6. **Pay:** use `ai_salary_min_value`/`ai_salary_max_value` (fall back to `ai_salary_value`), only
    when currency is USD. Convert to yearly: YEAR×1, MONTH×12, WEEK×52, DAY×260, HOUR×2080. Round.
    No pay → NULL. Never estimate or invent pay.

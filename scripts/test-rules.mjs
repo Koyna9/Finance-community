@@ -1,6 +1,6 @@
 // Tiny check of shared/rules.js: run `node scripts/test-rules.mjs`.
 
-import { toRow, cleanTitle, levelFor, slugify, companyWebsite, employmentTypes, statedPay } from "../shared/rules.js";
+import { toRow, cleanTitle, cleanCompany, levelFor, slugify, companyWebsite, employmentTypes, statedPay } from "../shared/rules.js";
 
 const base = {
   countries_derived: ["United States"],
@@ -63,6 +63,16 @@ const checks = [
   [levelFor("Finance Business Partner"), "mid"],
   [levelFor("Senior Finance Business Partner"), "senior"],
   [levelFor("Partner, Audit"), "lead"],
+  // Company names (SEO audit 2026-10-12, 3.5).
+  [cleanCompany("Jackson Hewitt - 1558"), "Jackson Hewitt"],
+  [cleanCompany("Kirby-Smith Machinery, Inc. - Oklahoma City, OK"), "Kirby-Smith Machinery, Inc."],
+  [cleanCompany("The Learning Experiene -  Huntington Beach, CA"), "The Learning Experiene"],
+  [cleanCompany("DGI - Menard INC"), "DGI - Menard INC"],
+  [cleanCompany("PMM - America's Technology Molder"), "PMM - America's Technology Molder"],
+  [cleanCompany("ServiceMaster Restore 10188 - Doral"), "ServiceMaster Restore 10188 - Doral"],
+  [cleanCompany("Stanley 1913"), "Stanley 1913"],
+  [cleanCompany("Acme - Springfield, XX"), "Acme - Springfield, XX"],
+  [cleanCompany("No relevant LinkedIn company found."), null],
   // Company website, employment type, stated pay (SEO audit 2026-10-12).
   [companyWebsite({ org_linkedin_website: "http://https://ronaldmcdonaldhouseoregon.org" }), "https://ronaldmcdonaldhouseoregon.org/"],
   [companyWebsite({ org_linkedin_website: "www.crescolabs.com" }), "https://www.crescolabs.com/"],
