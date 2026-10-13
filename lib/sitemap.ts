@@ -14,6 +14,7 @@ import {
 	getPayByGroup,
 	getSitemapJobs,
 	getSitemapPlaces,
+	getTitleSalaries,
 } from "@/lib/db";
 import { CATEGORY_LIST, categoryInfo, LEVELS, levelPath } from "@/lib/format";
 import { canonicalUrl } from "@/lib/seo";
@@ -74,12 +75,18 @@ async function entries(type: SitemapType): Promise<Entry[]> {
 			return companies.map((c) => ({ path: `/companies/${c.key}`, lastmod: changes[c.key] }));
 		}
 		case "salaries": {
-			const [pay, all, byCategory] = await Promise.all([
+			const [pay, titles, all, byCategory, byTitle] = await Promise.all([
 				getPayByGroup("category", {}, MIN_PAY_LISTINGS),
+				getTitleSalaries(MIN_PAY_LISTINGS),
 				getLastChanges("all"),
 				getLastChanges("category"),
+				getLastChanges("title"),
 			]);
-			return [{ path: "/salaries", lastmod: all[""] }, ...pay.map((p) => ({ path: `/salaries/${p.key}`, lastmod: byCategory[p.key] }))];
+			return [
+				{ path: "/salaries", lastmod: all[""] },
+				...pay.map((p) => ({ path: `/salaries/${p.key}`, lastmod: byCategory[p.key] })),
+				...titles.map((t) => ({ path: `/salaries/titles/${t.key}`, lastmod: byTitle[t.key] })),
+			];
 		}
 		case "jobs": {
 			const jobs = await getSitemapJobs();

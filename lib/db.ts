@@ -488,15 +488,29 @@ export async function getPayStats(filters: ListFilter): Promise<PayStats | null>
 
 export type PayGroupRow = PayStats & { key: string; label: string };
 
-// Pay per category or per state (same figures as getPayStats), only for groups where at least
-// `minWithPay` counted open jobs state pay. total = all open jobs in the group (with or without pay).
-export async function getPayByGroup(by: "category" | "state", f: ListFilter, minWithPay: number): Promise<PayGroupRow[]> {
-	return cached("getPayByGroup", [by, f, minWithPay], () => {
+// Pay per category, state, job title or level (same figures as getPayStats), only for groups where at
+// least `minWithPay` counted open jobs state pay, from at least `minCompanies` different companies.
+// total = all open jobs in the group (with or without pay).
+export async function getPayByGroup(
+	by: "category" | "state" | "title" | "level",
+	f: ListFilter,
+	minWithPay: number,
+	minCompanies = 1,
+): Promise<PayGroupRow[]> {
+	return cached("getPayByGroup", [by, f, minWithPay, minCompanies], () => {
 		const values: unknown[] = [];
 		const where = filterSql(f, values);
-		const [key, label] = by === "state" ? ["state_slug", "MIN(state)"] : ["category::text", "category::text"];
-		values.push(minWithPay);
+		const [key, label] = {
+			category: ["category::text", "category::text"],
+			state: ["state_slug", "MIN(state)"],
+			title: ["title_slug", "MIN(clean_title)"],
+			level: ["level::text", "level::text"],
+		}[by];
 		const paid = `((pay_min > 0 OR pay_max > 0) AND ${PAY_COUNTS_SQL})`;
+		const minWithPayParam = values.push(minWithPay); // its $n number
+		// Only when asked for (minCompanies > 1), so the existing callers' results stay exactly the same.
+		const companies =
+			minCompanies > 1 ? `AND COUNT(DISTINCT company_slug) FILTER (WHERE ${paid}) >= $${values.push(minCompanies)}` : "";
 		return sql<PayGroupRow>(
 			`SELECT ${key} AS key, ${label} AS label,
             MIN(COALESCE(NULLIF(pay_min, 0), pay_max)) FILTER (WHERE ${paid})::float8 AS low,
@@ -507,10 +521,44 @@ export async function getPayByGroup(by: "category" | "state", f: ListFilter, min
             (COUNT(*) FILTER (WHERE ${paid}))::int AS "withPay",
             COUNT(*)::int AS total
      FROM jobs WHERE ${where} AND ${key} IS NOT NULL
-     GROUP BY 1 HAVING COUNT(*) FILTER (WHERE ${paid}) >= $${values.length}
+     GROUP BY 1 HAVING COUNT(*) FILTER (WHERE ${paid}) >= $${minWithPayParam} ${companies}
      ORDER BY "withPay" DESC, label ASC`,
 			values,
 		);
+	});
+}
+
+// Job titles that get a salary page (/salaries/titles/<title>; SEO audit 2026-10-12, section 5): at
+// least `minWithPay` full-time listings that state pay, from at least SALARY_TITLE_MIN_COMPANIES
+// different companies, so a page never rests on one employer. The one list used by the page, its
+// links and the sitemap. Biggest first.
+export const SALARY_TITLE_MIN_COMPANIES = 3;
+
+export async function getTitleSalaries(minWithPay: number): Promise<PayGroupRow[]> {
+	return getPayByGroup("title", {}, minWithPay, SALARY_TITLE_MIN_COMPANIES);
+}
+
+// The open jobs behind a page's salary figures (stating pay, not part-time/contract/temporary/intern),
+// newest first, as job cards.
+export async function getPayListings(f: ListFilter, limit: number): Promise<JobCardRow[]> {
+	return cached("getPayListings", [f, limit], async () => {
+		const values: unknown[] = [];
+		const where = filterSql(f, values);
+		const rows = await sql<{ id: number }>(
+			`SELECT id FROM jobs WHERE ${where} AND (pay_min > 0 OR pay_max > 0) AND ${PAY_COUNTS_SQL}`,
+			values,
+		);
+		if (rows.length === 0) return [];
+		const payload = await payloadClient();
+		const { docs } = await payload.find({
+			collection: "jobs",
+			where: { id: { in: rows.map((r) => r.id) } },
+			sort: ["-datePosted", "-id"],
+			limit,
+			depth: 0,
+			select: CARD_SELECT,
+		});
+		return (docs as JobDoc[]).map(toCard);
 	});
 }
 

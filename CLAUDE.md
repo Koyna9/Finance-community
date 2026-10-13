@@ -383,6 +383,7 @@ articles/blogs and educational content; keep the setup simple so they can be add
 | Company | `/companies/[company]` | `/companies/stripe` |
 | Pay overview | `/salaries` | each category: low, median, high yearly USD, number of jobs with pay |
 | Pay for a category | `/salaries/[category]` | `/salaries/fpa` — US figure + table by state |
+| Pay for a job title | `/salaries/titles/[title]` | `/salaries/titles/staff-accountant` — US figure, by level (levels with 3+), the listings behind it. Only titles with 5+ full-time listings that state pay from 3+ different companies (`getTitleSalaries`; never one employer's pay sheet), else 404 + not linked + not in the sitemap. Linked from `/salaries`, the title's `/titles/` page and its job pages (added 2026-10-13, SEO audit section 5) |
 | Job | `/jobs/[slug]` | — |
 | About | `/about` | what the site is, how it differs (added 2026-10-13; who runs it + contact: when the company decides) |
 | How we source jobs | `/how-we-source-jobs` | where jobs come from, sorting, nightly closing, stated-pay rule (keep it true when those rules change) |

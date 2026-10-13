@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { cache } from "react";
 import { MIN_PAY_LISTINGS } from "@/components/PayStrip";
-import { getGroupCounts, getJobList, getListFacts, getPayStats, minJobsPerPage } from "@/lib/db";
+import { getGroupCounts, getJobList, getListFacts, getPayStats, getTitleSalaries, minJobsPerPage } from "@/lib/db";
 import { categoryInfo } from "@/lib/format";
 import { listDescription, listIntro, listTitle } from "@/lib/seo";
 import {
@@ -37,13 +37,15 @@ const loadTitle = cache(async (titleSlug: string, pageText: string | null): Prom
 	if (page > totalPages || list.jobs.length === 0) notFound();
 
 	const name = list.jobs[0].clean_title; // "Financial Analyst"
-	const [pay, states, titles, categories, facts] = await Promise.all([
+	const [pay, states, titles, categories, facts, titleSalaries] = await Promise.all([
 		getPayStats(filter),
 		getGroupCounts("state", filter, 1),
 		getGroupCounts("title"),
 		getGroupCounts("category", filter, 1),
 		getListFacts(filter),
+		getTitleSalaries(MIN_PAY_LISTINGS),
 	]);
+	const hasSalaryPage = titleSalaries.some((t) => t.key === titleSlug);
 	const employers = facts.topCompanies.map((c) => c.label);
 	return {
 		path: `/titles/${titleSlug}`,
@@ -57,8 +59,10 @@ const loadTitle = cache(async (titleSlug: string, pageText: string | null): Prom
 		intro: listIntro(list.total, `${name} jobs`, null, states.slice(0, TOP_PLACES_IN_INTRO).map((s) => s.label)),
 		crumbs: [{ label: "Job titles", href: "/titles" }, { label: name }],
 		pay: pay && pay.withPay >= MIN_PAY_LISTINGS ? pay : null,
-		// (A title can span roles, so link the overview, which always exists.)
-		salary: { href: "/salaries", label: "Finance salaries" },
+		// The title's own salary page when it has one; else the overview (a title can span roles).
+		salary: hasSalaryPage
+			? { href: `/salaries/titles/${titleSlug}`, label: `${name} salary` }
+			: { href: "/salaries", label: "Finance salaries" },
 		boxes: [
 			{
 				id: "roles",

@@ -3,7 +3,7 @@ import Breadcrumbs from "@/components/Breadcrumbs";
 import PayMethod from "@/components/PayMethod";
 import PayStrip, { MIN_PAY_LISTINGS } from "@/components/PayStrip";
 import PayTable from "@/components/PayTable";
-import { getPayByGroup, getPayStats } from "@/lib/db";
+import { getPayByGroup, getPayStats, getTitleSalaries } from "@/lib/db";
 import { CATEGORY_LIST, categoryInfo } from "@/lib/format";
 import { canonicalUrl, salaryDescription, socialMetadata } from "@/lib/seo";
 
@@ -29,7 +29,11 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function SalariesPage() {
-	const [pay, byCategory] = await Promise.all([getPayStats({}), getPayByGroup("category", {}, 1)]);
+	const [pay, byCategory, titles] = await Promise.all([
+		getPayStats({}),
+		getPayByGroup("category", {}, 1),
+		getTitleSalaries(MIN_PAY_LISTINGS),
+	]);
 	const enough = byCategory.filter((r) => r.withPay >= MIN_PAY_LISTINGS);
 	const enoughKeys = new Set(enough.map((r) => r.key));
 
@@ -52,25 +56,41 @@ export default async function SalariesPage() {
 			</section>
 
 			<main className="mx-auto flex max-w-[1200px] flex-wrap items-start gap-8 px-6 pb-16 pt-8">
-				<section aria-labelledby="by-role" className="flex min-w-0 flex-[999_1_560px] flex-col gap-3.5">
-					<h2 id="by-role" className="text-[22px] font-bold tracking-[-0.01em]">
-						Pay by role
-					</h2>
-					<PayTable
-						caption="Yearly pay by finance role"
-						firstColumn="Role"
-						rows={enough.map((r) => ({
-							...r,
-							label: categoryInfo(r.key)!.label,
-							href: `/salaries/${r.key}`,
-						}))}
-						tooFew={CATEGORY_LIST.filter((c) => !enoughKeys.has(c.key)).map((c) => ({
-							key: c.key,
-							label: c.label,
-							withPay: byCategory.find((r) => r.key === c.key)?.withPay ?? 0,
-						}))}
-					/>
-				</section>
+				<div className="flex min-w-0 flex-[999_1_560px] flex-col gap-8">
+					<section aria-labelledby="by-role" className="flex flex-col gap-3.5">
+						<h2 id="by-role" className="text-[22px] font-bold tracking-[-0.01em]">
+							Pay by role
+						</h2>
+						<PayTable
+							caption="Yearly pay by finance role"
+							firstColumn="Role"
+							rows={enough.map((r) => ({
+								...r,
+								label: categoryInfo(r.key)!.label,
+								href: `/salaries/${r.key}`,
+							}))}
+							tooFew={CATEGORY_LIST.filter((c) => !enoughKeys.has(c.key)).map((c) => ({
+								key: c.key,
+								label: c.label,
+								withPay: byCategory.find((r) => r.key === c.key)?.withPay ?? 0,
+							}))}
+						/>
+					</section>
+
+					{/* Titles with their own salary page (5+ full-time listings with pay, from 3+ companies) */}
+					{titles.length > 0 && (
+						<section aria-labelledby="by-title" className="flex flex-col gap-3.5">
+							<h2 id="by-title" className="text-[22px] font-bold tracking-[-0.01em]">
+								Pay by job title
+							</h2>
+							<PayTable
+								caption="Yearly pay by finance job title"
+								firstColumn="Job title"
+								rows={titles.map((t) => ({ ...t, href: `/salaries/titles/${t.key}` }))}
+							/>
+						</section>
+					)}
+				</div>
 
 				<aside className="flex min-w-0 flex-[1_1_300px] flex-col gap-5">
 					<PayMethod />

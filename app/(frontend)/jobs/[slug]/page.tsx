@@ -14,6 +14,7 @@ import {
 	getCategoryPlaceCounts,
 	getJobBySlug,
 	getPayStats,
+	getTitleSalaries,
 	getSimilarJobs,
 	minJobsPerPage,
 	payMidpoint,
@@ -70,13 +71,16 @@ export default async function JobPage({ params }: Props) {
 	const open = job.status === "open";
 	const cat = categoryInfo(job.category);
 	const roleLabel = cat?.shortLabel ?? "Finance";
-	const [min, placeCounts, similar, payStats, usPay] = await Promise.all([
+	const [min, placeCounts, similar, payStats, usPay, titleSalaries] = await Promise.all([
 		minJobsPerPage(),
 		getCategoryPlaceCounts(job.category, job.state_slug, job.city_slug),
 		getSimilarJobs(job, open ? SIMILAR_OPEN : SIMILAR_CLOSED),
 		job.state_slug ? getPayStats({ category: job.category, stateSlug: job.state_slug }) : null,
 		getPayStats({ category: job.category }), // does /salaries/<category> exist?
+		getTitleSalaries(MIN_SALARY_LISTINGS), // does /salaries/titles/<title> exist?
 	]);
+	const titleSalaryPath =
+		job.title_slug && titleSalaries.some((t) => t.key === job.title_slug) ? `/salaries/titles/${job.title_slug}` : null;
 
 	// Category place pages that pass the thin-page rule (never link to a 404).
 	const catPath = cat?.path ?? "/finance-jobs";
@@ -275,6 +279,11 @@ export default async function JobPage({ params }: Props) {
 							<Link href={`/salaries/${cat.key}`} className="mt-3 inline-block text-sm font-semibold text-accent-text">
 								See {roleLabel} salaries by state →
 							</Link>
+							{titleSalaryPath && (
+								<Link href={titleSalaryPath} className="mt-2 block text-sm font-semibold text-accent-text">
+									See {job.clean_title} salary →
+								</Link>
+							)}
 						</section>
 					)}
 
