@@ -1,0 +1,9 @@
+{
+  "x-api-jobs-limit": "500",
+  "x-api-jobs-remaining": "30",
+  "x-api-jobs-this-request": "5",
+  "x-api-next-billing-date": "2026-10-13T11:20:31.976192Z",
+  "x-api-requests-limit": "50",
+  "x-api-requests-remaining": "37",
+  "saved_at": "2026-10-09T11:28:40.897Z"
+}

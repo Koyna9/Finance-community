@@ -1,0 +1,72 @@
+@import "tailwindcss";
+
+/* Design tokens from design/DESIGN.md section 1. Use them as Tailwind classes,
+   e.g. bg-ink, text-accent-text, border-border, bg-chip. */
+@theme {
+	--color-ink: #0b2545;
+	--color-accent: #2e9e77; /* decorative only, never text */
+	--color-accent-text: #17694d;
+	--color-accent-tint: #e8f3ee;
+	--color-accent-tint-text: #24453a;
+	--color-text: #0e1b2a;
+	--color-text-body: #24303d;
+	--color-text-2: #3e4a59;
+	--color-muted: #556170;
+	--color-bg: #f5f7fa;
+	--color-surface: #ffffff;
+	--color-surface-2: #fbfcfd;
+	--color-chip: #f1f4f8;
+	--color-logo-tile: #e7edf4;
+	--color-border: #e1e6ec;
+	--color-border-soft: #eef1f5;
+	--color-border-strong: #d6dde5;
+	--color-link-hover: #1f7a5c;
+
+	/* Only inside the navy hero */
+	--color-hero-eyebrow: #9fd3be;
+	--color-hero-body: #d5dee8;
+	--color-hero-label: #c4cfdb;
+
+	/* Home page "$" coin: turns left to right around its vertical axis (class animate-coin-flip) */
+	--animate-coin-flip: coin-flip 2.5s linear infinite;
+	@keyframes coin-flip {
+		from {
+			transform: perspective(200px) rotateY(0deg);
+		}
+		to {
+			transform: perspective(200px) rotateY(360deg);
+		}
+	}
+}
+
+/* IBM Plex fonts are loaded with next/font in app/layout.tsx. */
+@theme inline {
+	--font-sans: var(--font-plex-sans), "Helvetica Neue", sans-serif;
+	--font-mono: var(--font-plex-mono), monospace;
+}
+
+@layer base {
+	body {
+		background: var(--color-bg);
+		color: var(--color-text);
+		font-family: var(--font-sans);
+	}
+
+	a {
+		color: var(--color-ink);
+		text-decoration: none;
+	}
+
+	a:hover {
+		color: var(--color-link-hover);
+		text-decoration: underline;
+	}
+
+	/* Visible focus ring on every link and button */
+	a:focus-visible,
+	button:focus-visible {
+		outline: 2px solid var(--color-ink);
+		outline-offset: 2px;
+		border-radius: 4px;
+	}
+}

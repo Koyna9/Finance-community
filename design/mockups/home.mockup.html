@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>finance-community — Home</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#0B2545;text-decoration:none}a:hover{color:#1F7A5C;text-decoration:underline}
+</style>
+</helmet>
+<div style="font-family: 'IBM Plex Sans', 'Helvetica Neue', sans-serif; color: #0E1B2A; background: #F5F7FA; min-height: 100vh">
+
+<header style="background: #FFFFFF; border-bottom: 1px solid #E1E6EC">
+<div style="max-width: 1200px; margin: 0 auto; padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap">
+<a href="Main.dc.html" style="display: flex; align-items: center; gap: 10px; color: {{ink}}; text-decoration: none">
+<span style="width: 32px; height: 32px; border-radius: 7px; background: {{ink}}; display: flex; align-items: flex-end; justify-content: center; gap: 3px; padding-bottom: 7px; box-sizing: border-box">
+<span style="width: 4px; height: 8px; background: #FFFFFF; border-radius: 1px"></span>
+<span style="width: 4px; height: 13px; background: #FFFFFF; border-radius: 1px"></span>
+<span style="width: 4px; height: 18px; background: {{accent}}; border-radius: 1px"></span>
+</span>
+<span style="font-size: 20px; font-weight: 700; letter-spacing: -0.01em">finance-community</span>
+</a>
+<nav aria-label="Main" style="display: flex; gap: 6px; flex-wrap: wrap">
+<a href="Listing.dc.html" style="padding: 12px 14px; font-weight: 500; font-size: 15px">Finance jobs</a>
+<a href="#locations" style="padding: 12px 14px; font-weight: 500; font-size: 15px">Locations</a>
+<a href="#salaries" style="padding: 12px 14px; font-weight: 500; font-size: 15px">Salaries</a>
+</nav>
+</div>
+</header>
+
+<section style="background: {{ink}}; color: #FFFFFF">
+<div style="max-width: 1200px; margin: 0 auto; padding: 64px 24px 56px; display: flex; flex-direction: column; gap: 22px">
+<p style="margin: 0; font-family: 'IBM Plex Mono', monospace; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: #9FD3BE">US finance jobs · updated every night</p>
+<h1 style="margin: 0; font-size: 46px; line-height: 1.12; font-weight: 700; letter-spacing: -0.02em; max-width: 760px">Finance roles at US companies, straight from their hiring pages.</h1>
+<p style="margin: 0; font-size: 18px; line-height: 1.55; color: #D5DEE8; max-width: 640px">Accounting, FP&amp;A, tax, audit and more, sorted by role, level, state and city. Every listing links to the employer's own site to apply.</p>
+<div style="display: flex; gap: 12px; flex-wrap: wrap; margin-top: 6px">
+<sc-for list="{{quick}}" as="q" hint-placeholder-count="5">
+<a href="Listing.dc.html" style="padding: 11px 16px; border-radius: 999px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.22); color: #FFFFFF; font-size: 15px; font-weight: 500; text-decoration: none">{{q.label}}</a>
+</sc-for>
+</div>
+<div style="display: flex; gap: 40px; flex-wrap: wrap; margin-top: 18px; padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.16)">
+<div style="display: flex; flex-direction: column; gap: 2px"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 30px; font-weight: 600">104</span><span style="font-size: 14px; color: #C4CFDB">open finance jobs</span></div>
+<div style="display: flex; flex-direction: column; gap: 2px"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 30px; font-weight: 600">16</span><span style="font-size: 14px; color: #C4CFDB">states with 3+ roles</span></div>
+<div style="display: flex; flex-direction: column; gap: 2px"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 30px; font-weight: 600">54</span><span style="font-size: 14px; color: #C4CFDB">listings state pay</span></div>
+</div>
+</div>
+</section>
+
+<main style="max-width: 1200px; margin: 0 auto; padding: 48px 24px 64px; display: flex; flex-direction: column; gap: 56px">
+
+<section aria-labelledby="roles" style="display: flex; flex-direction: column; gap: 18px">
+<div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap">
+<h2 id="roles" style="margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -0.01em">Browse by role</h2>
+<a href="Listing.dc.html" style="font-weight: 600; font-size: 15px; color: {{accentText}}">All finance jobs →</a>
+</div>
+<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px">
+<sc-for list="{{roles}}" as="r" hint-placeholder-count="8">
+<a href="Listing.dc.html" style="background: #FFFFFF; border: 1px solid #E1E6EC; border-radius: 10px; padding: 18px 20px; display: flex; flex-direction: column; gap: 6px; text-decoration: none; color: #0E1B2A; min-height: 92px; box-sizing: border-box">
+<span style="font-size: 17px; font-weight: 600">{{r.name}}</span>
+<span style="font-size: 14px; color: #556170">{{r.hint}}</span>
+<span style="margin-top: auto; font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 600; color: {{accentText}}">{{r.count}} open jobs</span>
+</a>
+</sc-for>
+</div>
+</section>
+
+<section aria-labelledby="latest" style="display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start">
+<div style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap">
+<h2 id="latest" style="margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -0.01em">Latest jobs</h2>
+<span style="font-size: 14px; color: #556170">Newest first · checked nightly</span>
+</div>
+<sc-for list="{{jobs}}" as="j" hint-placeholder-count="6">
+<article style="background: #FFFFFF; border: 1px solid #E1E6EC; border-radius: 10px; padding: 18px 20px; display: flex; gap: 16px; align-items: flex-start">
+<span style="flex: 0 0 48px; width: 48px; height: 48px; border-radius: 9px; background: #E7EDF4; color: {{ink}}; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px">{{j.initials}}</span>
+<div style="flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 6px">
+<div style="display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap"><span style="font-size: 14px; font-weight: 500; color: #3E4A59">{{j.company}}</span><span style="font-size: 13px; color: #556170">{{j.posted}}</span></div>
+<a href="Job.dc.html" style="font-size: 18px; font-weight: 600; color: #0E1B2A; line-height: 1.3">{{j.title}}</a>
+<div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px">
+<span style="display: inline-flex; align-items: center; gap: 5px; font-size: 13px; color: #3E4A59; background: #F1F4F8; border-radius: 6px; padding: 5px 9px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"></path><circle cx="12" cy="9.5" r="2.5"></circle></svg>{{j.place}}</span>
+<span style="font-size: 13px; color: #3E4A59; background: #F1F4F8; border-radius: 6px; padding: 5px 9px">{{j.level}}</span>
+<span style="font-size: 13px; color: #3E4A59; background: #F1F4F8; border-radius: 6px; padding: 5px 9px">{{j.role}}</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 600; color: {{j.payColor}}; background: {{j.payBg}}; border-radius: 6px; padding: 5px 9px">{{j.pay}}</span>
+</div>
+</div>
+</article>
+</sc-for>
+<a href="Listing.dc.html" style="align-self: flex-start; padding: 12px 18px; border-radius: 8px; border: 1px solid #C9D2DC; background: #FFFFFF; font-weight: 600; font-size: 15px; color: {{ink}}">See all 104 finance jobs</a>
+</div>
+
+<aside style="flex: 1 1 300px; min-width: 0; display: flex; flex-direction: column; gap: 20px">
+<section id="locations" aria-labelledby="states" style="background: #FFFFFF; border: 1px solid #E1E6EC; border-radius: 10px; padding: 20px">
+<h2 id="states" style="margin: 0 0 12px; font-size: 18px; font-weight: 700">Browse by state</h2>
+<ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column">
+<sc-for list="{{states}}" as="s" hint-placeholder-count="9">
+<li style="border-top: 1px solid #EEF1F5"><a href="Listing.dc.html" style="display: flex; justify-content: space-between; padding: 10px 0; font-size: 15px"><span>{{s.name}}</span><span style="font-family: 'IBM Plex Mono', monospace; color: #556170">{{s.count}}</span></a></li>
+</sc-for>
+</ul>
+<a href="#locations" style="display: inline-block; margin-top: 12px; font-weight: 600; font-size: 14px; color: {{accentText}}">All locations →</a>
+</section>
+<section aria-labelledby="levels" style="background: #FFFFFF; border: 1px solid #E1E6EC; border-radius: 10px; padding: 20px">
+<h2 id="levels" style="margin: 0 0 12px; font-size: 18px; font-weight: 700">By experience level</h2>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+<sc-for list="{{levels}}" as="l" hint-placeholder-count="4">
+<a href="Listing.dc.html" style="border: 1px solid #E1E6EC; border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 2px; color: #0E1B2A; text-decoration: none"><span style="font-weight: 600; font-size: 15px">{{l.name}}</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #556170">{{l.count}} jobs</span></a>
+</sc-for>
+</div>
+</section>
+<section id="salaries" aria-labelledby="pay" style="background: #E8F3EE; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 8px">
+<h2 id="pay" style="margin: 0; font-size: 18px; font-weight: 700; color: #0E1B2A">What finance roles pay</h2>
+<p style="margin: 0; font-size: 15px; line-height: 1.5; color: #24453A">Pay ranges by role and state, built only from listings where the employer states pay.</p>
+<a href="#salaries" style="font-weight: 600; font-size: 15px; color: {{accentText}}">See salaries →</a>
+</section>
+</aside>
+</section>
+
+</main>
+
+<footer style="background: #FFFFFF; border-top: 1px solid #E1E6EC">
+<div style="max-width: 1200px; margin: 0 auto; padding: 36px 24px; display: flex; flex-wrap: wrap; gap: 40px; justify-content: space-between">
+<div style="display: flex; flex-direction: column; gap: 8px; max-width: 320px">
+<span style="font-size: 18px; font-weight: 700; color: {{ink}}">finance-community</span>
+<span style="font-size: 14px; line-height: 1.5; color: #556170">Finance jobs from US employers' own hiring pages. We don't take applications — you apply directly with the company.</span>
+</div>
+<div style="display: flex; gap: 48px; flex-wrap: wrap; font-size: 14px">
+<div style="display: flex; flex-direction: column; gap: 8px"><span style="font-weight: 600">Roles</span><a href="Listing.dc.html">Accounting</a><a href="Listing.dc.html">FP&amp;A</a><a href="Listing.dc.html">Tax</a><a href="Listing.dc.html">Audit</a></div>
+<div style="display: flex; flex-direction: column; gap: 8px"><span style="font-weight: 600">Top states</span><a href="Listing.dc.html">Texas</a><a href="Listing.dc.html">California</a><a href="Listing.dc.html">Florida</a><a href="Listing.dc.html">New York</a></div>
+<div style="display: flex; flex-direction: column; gap: 8px"><span style="font-weight: 600">Explore</span><a href="#locations">Locations</a><a href="#salaries">Salaries</a><a href="Listing.dc.html">Remote jobs</a></div>
+</div>
+</div>
+</footer>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"ink":{"editor":"color","default":"#0B2545","options":["#0B2545","#14213D","#1B3A4B"]},"accent":{"editor":"color","default":"#2E9E77","options":["#2E9E77","#3A7BD5","#C9822B"]},"$preview":{"width":1280,"height":2360}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const ink = this.props.ink ?? '#0B2545';
+    const accent = this.props.accent ?? '#2E9E77';
+    const stated = { payColor: '#17694D', payBg: '#E8F3EE' };
+    const none = { payColor: '#556170', payBg: '#F1F4F8' };
+    return {
+      ink,
+      accent,
+      accentText: '#17694D',
+      quick: [
+        { label: 'Accounting' }, { label: 'FP&A' }, { label: 'Tax' },
+        { label: 'Remote finance jobs' }, { label: 'Entry level' }
+      ],
+      roles: [
+        { name: 'Accounting', hint: 'Staff accountants, AP/AR, controllers', count: 62 },
+        { name: 'FP&A', hint: 'Financial analysts, planning, business finance', count: 11 },
+        { name: 'Tax', hint: 'Tax accountants, specialists, managers', count: 11 },
+        { name: 'Risk & Compliance', hint: 'Risk, compliance, AML, KYC', count: 6 },
+        { name: 'Audit', hint: 'Internal, external and IT audit', count: 6 },
+        { name: 'Investment & Corp Dev', hint: 'M&A, valuation, investment accounting', count: 4 },
+        { name: 'Treasury', hint: 'Cash management, liquidity', count: 2 },
+        { name: 'Finance Leadership', hint: 'CFO, VP and head of finance', count: 2 }
+      ],
+      jobs: [
+        Object.assign({ initials: 'HF', company: 'Halverson Freight', posted: '2h ago', title: 'FP&A Director', place: 'Dallas, TX', level: 'Lead', role: 'FP&A', pay: '$165K–$195K' }, stated),
+        Object.assign({ initials: 'MH', company: 'Meridian Health Partners', posted: '3h ago', title: 'Senior Tax Accountant', place: 'Chicago, IL', level: 'Senior', role: 'Tax', pay: 'Pay not stated' }, none),
+        Object.assign({ initials: 'CP', company: 'Carrow & Pike LLP', posted: '5h ago', title: 'IT Audit Manager', place: 'New York, NY', level: 'Senior', role: 'Audit', pay: '$128K–$152K' }, stated),
+        Object.assign({ initials: 'BF', company: 'Bluestem Foods', posted: '6h ago', title: 'Accounts Receivable Analyst', place: 'Houston, TX', level: 'Mid', role: 'Accounting', pay: '$58K–$70K' }, stated),
+        Object.assign({ initials: 'WE', company: 'Westgate Energy', posted: '8h ago', title: 'Treasury Analyst', place: 'Remote (US)', level: 'Mid', role: 'Treasury', pay: '$82K–$98K' }, stated),
+        Object.assign({ initials: 'SH', company: 'Solano Hospitality', posted: '9h ago', title: 'Staff Accountant', place: 'Coral Gables, FL', level: 'Entry', role: 'Accounting', pay: '$55K–$62K' }, stated)
+      ],
+      states: [
+        { name: 'Texas', count: 15 }, { name: 'California', count: 10 }, { name: 'Florida', count: 9 },
+        { name: 'New York', count: 5 }, { name: 'Minnesota', count: 5 }, { name: 'Wisconsin', count: 4 },
+        { name: 'Tennessee', count: 4 }, { name: 'Massachusetts', count: 4 }, { name: 'Illinois', count: 4 }
+      ],
+      levels: [
+        { name: 'Entry level', count: 22 }, { name: 'Mid level', count: 45 },
+        { name: 'Senior', count: 27 }, { name: 'Lead', count: 10 }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>
